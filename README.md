@@ -2,10 +2,10 @@
 
 | Button combination | Effect | 
 |-|-|
-| L3 + dpad left | Get on flutflut, or get off flutflut/zoomer if already on. |
-| L3 + dpad right | Get on zoomer, or get off flutflut/zoomer if already on. |
-| L3 + dpad down | Set a custom checkpoint at Jak's current position (also remembers if you are on flutflut or zoomer). Only works if Jak is in an "idle" state. Plays a sound to confirm. |
-| L3 + dpad up | Reset to last selected skip/trick, or to custom checkpoint, whichever was used most recently. If you also hold R3, for custom checkpoints it will reset the entire game. |
+| L2 + dpad left | Get on flutflut, or get off flutflut/zoomer if already on. |
+| L2 + dpad right | Get on zoomer, or get off flutflut/zoomer if already on. |
+| L2 + dpad down | Set a custom checkpoint at Jak's current position (also remembers if you are on flutflut or zoomer). Only works if Jak is in an "idle" state. Plays a sound to confirm. |
+| L2 + dpad up | Reset to last selected skip/trick, or to custom checkpoint, whichever was used most recently. If you also hold R2, for custom checkpoints it will reset the entire game. |
 
 - If inputs are not working, double check that Speedrunner Mode is enabled under Misc Options
 - Known Issues: 
