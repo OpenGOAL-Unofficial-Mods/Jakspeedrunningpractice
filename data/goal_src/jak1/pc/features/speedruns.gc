@@ -282,6 +282,7 @@
       ;; assume current continue is good enough for the current location
       (continue-point-copy! *tmp-continue-point* (-> *game-info* current-continue))
       (vector-copy! (-> *tmp-continue-point* trans) (-> *target* root trans))
+      (quaternion-copy! (-> *tmp-continue-point* quat) (-> *target* control unknown-quaternion00))
       (vector-copy! (-> *tmp-continue-point* camera-trans) (-> *camera-combiner* trans))
       (camera-rot-copy! *tmp-continue-point* (-> *math-camera* inv-camera-rot))
 
