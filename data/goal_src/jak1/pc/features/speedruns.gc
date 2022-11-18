@@ -64,10 +64,9 @@
       (set! *practice-spawn-post-init* #f)
       )
 
-    (when (and (cpad-hold? 0 r3)
-             )
+    (when (cpad-hold? 0 l2)
       ;; Check for fast reset combo
-      (when (or (cpad-pressed? 0 up) (cpad-pressed? 0 l3))
+      (when (cpad-pressed? 0 up)
         (format #t "player triggered reset combo~%")
         (speedrun-practice-spawn)
         )
@@ -157,16 +156,18 @@
 (define *tmp-zoomer?* #f)
 
 (defun speedrun-practice-temp-checkpoint ()
-  (cond
-    (*tmp-flut?* (set! *practice-spawn-post-init* get-on-flutflut))
-    (*tmp-zoomer?* (set! *practice-spawn-post-init* get-on-zoomer))
+  (when (-> *tmp-continue-point* level)
+    (cond
+      (*tmp-flut?* (set! *practice-spawn-post-init* get-on-flutflut))
+      (*tmp-zoomer?* (set! *practice-spawn-post-init* get-on-zoomer))
+      )
+    (if (cpad-hold? 0 r2)  ;; fully reset game if r2 held too
+      (initialize! *game-info* 'game (the-as game-save #f) "default")
+      )
+    (set! (-> *game-info* current-continue) *tmp-continue-point*)
+    (initialize! *game-info* 'dead (the-as game-save #f) (the-as string #f))
+    (speedrun-reset-common-settings)
     )
-  (if (cpad-pressed? 0 l3)  ;; fully reset game if L3 used instead of dpad up
-    (initialize! *game-info* 'game (the-as game-save #f) "default")
-    )
-  (set! (-> *game-info* current-continue) *tmp-continue-point*)
-  (initialize! *game-info* 'dead (the-as game-save #f) (the-as string #f))
-  (speedrun-reset-common-settings)
   (none)
   )
 
@@ -276,7 +277,7 @@
 (defun speedrun-practice-store-temp-checkpoint ()
   (case (-> *target* state)
     ;; only store temp checkpoint if in one of these states
-    ((target-stance target-flut-stance target-racing)
+    ((target-stance target-wade-stance target-swim-stance target-flut-stance target-racing)
       (set! *last-speedrun-practice-option* (speedrun-practice-option none))
       
       ;; assume current continue is good enough for the current location
@@ -284,7 +285,7 @@
       (vector-copy! (-> *tmp-continue-point* trans) (-> *target* root trans))
       (quaternion-copy! (-> *tmp-continue-point* quat) (-> *target* control unknown-quaternion00))
       (vector-copy! (-> *tmp-continue-point* camera-trans) (-> *camera-combiner* trans))
-      (camera-rot-copy! *tmp-continue-point* (-> *math-camera* inv-camera-rot))
+      (camera-rot-copy! *tmp-continue-point* (-> *camera-combiner* inv-camera-rot))
 
       (set! *tmp-flut?* #f)
       (set! *tmp-zoomer?* #f)
