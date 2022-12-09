@@ -620,11 +620,6 @@
         (set! (-> *progress-process* 0 card-info) #f)
         )
       )
-    (when (= screen (progress-screen fuel-cell))
-      ;; advance to options by default
-      (push! (-> *progress-process* 0))
-      (set! (-> *progress-process* 0 next-display-state) (progress-screen settings))
-      )
     )
   0
   (none)
