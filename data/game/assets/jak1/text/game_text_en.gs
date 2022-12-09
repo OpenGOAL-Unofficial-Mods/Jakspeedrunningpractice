@@ -390,6 +390,11 @@
 (#x1609 "GONDOLA SKIP - ON FOOT"
         "GONDOLA SKIP - ON FOOT")
 
+(#x160a "HUB 2 100%"
+        "HUB 2 100%")
+(#x160b "HUB 3 100%"
+        "HUB 3 100%")
+
 
 (#x16fc "HUB 1"
         "HUB 1")

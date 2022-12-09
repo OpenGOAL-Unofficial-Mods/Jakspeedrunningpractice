@@ -1,6 +1,8 @@
 ;;-*-Lisp-*-
 (in-package goal)
 
+(define-extern blocking-plane-destroy (function none))
+
 (define-extern speedrun-practice-spawn (function none)) ;; defined at end of this file
 (define-extern speedrun-practice-store-temp-checkpoint (function none)) ;; defined at end of this file
 
@@ -17,6 +19,8 @@
   (buttonskip)
   (gondola-flut)
   (gondola-foot)
+  (hub2-hundo)
+  (hub3-hundo)
   )
 
 (define *last-speedrun-practice-option* (speedrun-practice-option none))
@@ -244,6 +248,121 @@
   (none)
   )
 
+(defun give-seven-flies ((lvl-idx int))
+  ;; based on 'buzzer branch of (defmethod adjust game-info)
+  (let* ((ctrl (get-task-control (-> *level-task-data* lvl-idx task-info (-> *level-task-data* lvl-idx buzzer-task-index) task-id)))
+         (buzz-bits (get-reminder ctrl 0))
+         (t9-10 (method-of-object ctrl save-reminder))
+         )
+    (logior! buzz-bits #b1111111) ;; all 7 bits enabled
+    (t9-10 ctrl buzz-bits 0)
+    )
+  (set! (-> *game-counts* data lvl-idx buzzer-count) 7)
+  (none)
+  )
+
+(defun close-task-helper ((tsk game-task))
+  (logior! (-> *game-info* task-perm-list data (the int tsk) status) (entity-perm-status real-complete))
+  (close-specific-task! tsk (task-status need-resolution))
+  )
+
+(defun hub2-hundo-prep ()
+  ;; set collectable counts
+  ;; geyser
+  (set! (-> *game-info* money-per-level 0) 50)
+  (give-seven-flies 0)
+  ;; sandover
+  (set! (-> *game-info* money-per-level 1) 50)
+  (give-seven-flies 1)
+  ;; sentinel beach
+  (set! (-> *game-info* money-per-level 2) 150)
+  (give-seven-flies 2)
+  ;; FJ
+  (set! (-> *game-info* money-per-level 3) 150)
+  (give-seven-flies 3)
+  ;; misty
+  (set! (-> *game-info* money-per-level 4) 150)
+  (give-seven-flies 4)
+  ;; FC
+  (set! (-> *game-info* money-per-level 5) 50)
+  (give-seven-flies 5)
+  ;; totals
+  (set! (-> *game-info* money-total) 600.0)
+  (set! (-> *game-info* money) 180.0)
+  (set! (-> *game-info* buzzer-total) 42.0)
+  (set! (-> *game-info* fuel) 36.0)
+
+  ;; close tasks
+  (close-specific-task! (game-task intro) (task-status need-resolution))
+  (close-task-helper (game-task intro))
+  (close-task-helper (game-task training-gimmie))
+  (close-task-helper (game-task training-door))
+  (close-task-helper (game-task training-climb))
+  (close-task-helper (game-task training-buzzer))
+  (close-task-helper (game-task village1-yakow))
+  (close-task-helper (game-task village1-mayor-money))
+  (close-task-helper (game-task village1-uncle-money))
+  (close-task-helper (game-task village1-oracle-money1))
+  (close-task-helper (game-task village1-oracle-money2))
+  (close-task-helper (game-task village1-buzzer))
+  (close-task-helper (game-task beach-ecorocks))
+  (close-task-helper (game-task beach-pelican))
+  (close-task-helper (game-task beach-flutflut))
+  (close-task-helper (game-task beach-seagull))
+  (close-task-helper (game-task beach-cannon))
+  (close-task-helper (game-task beach-buzzer))
+  (close-task-helper (game-task beach-gimmie))
+  (close-task-helper (game-task beach-sentinel))
+  (close-task-helper (game-task jungle-eggtop))
+  (close-task-helper (game-task jungle-lurkerm))
+  (close-task-helper (game-task jungle-tower))
+  (close-task-helper (game-task jungle-fishgame))
+  (close-task-helper (game-task jungle-plant))
+  (close-task-helper (game-task jungle-buzzer))
+  (close-task-helper (game-task jungle-canyon-end))
+  (close-task-helper (game-task jungle-temple-door))
+  (close-task-helper (game-task misty-muse))
+  (close-task-helper (game-task misty-boat))
+  (close-task-helper (game-task misty-warehouse))
+  (close-task-helper (game-task misty-cannon))
+  (close-task-helper (game-task misty-bike))
+  (close-task-helper (game-task misty-buzzer))
+  (close-task-helper (game-task misty-bike-jump))
+  (close-task-helper (game-task misty-eco-challenge))
+  (close-specific-task! (game-task firecanyon-assistant) (task-status need-reward-speech))
+  (close-task-helper (game-task firecanyon-buzzer))
+  (close-task-helper (game-task firecanyon-end))
+
+  ;; needed to remove blocking invis wall at end of FC
+  (let ((end-of-fc-racer (the racer (process-by-ename "racer-8"))))
+    (when end-of-fc-racer
+      (set! (-> end-of-fc-racer condition) 0) ;; I think any condition besides 3 works here? idk
+      )
+    )
+  (none)
+  )
+  
+(defun hub3-hundo-prep ()
+  
+  (none)
+  )
+
+(defun speedrun-practice-hub2-hundo-start-run ()
+  (set! *practice-spawn-post-init* hub2-hundo-prep)
+  (initialize! *game-info* 'game (the-as game-save #f) "firecanyon-end")
+  (set! (-> *game-info* current-continue) (get-continue-by-name *game-info* "firecanyon-end"))
+  (speedrun-reset-common-settings)
+  (none)
+  )
+
+(defun speedrun-practice-hub3-hundo-start-run ()
+  (set! *practice-spawn-post-init* hub3-hundo-prep)
+  (initialize! *game-info* 'game (the-as game-save #f) "ogre-end")
+  (set! (-> *game-info* current-continue) (get-continue-by-name *game-info* "ogre-end"))
+  (speedrun-reset-common-settings)
+  (none)
+  )
+
 (defun continue-point-copy! ((dst continue-point) (src continue-point))
   (set! (-> dst level) (-> src level))
   (set! (-> dst quat y) 0.0)
@@ -342,6 +461,12 @@
       )
     (((speedrun-practice-option gondola-foot))
       (speedrun-practice-gondola-foot-start-run)
+      )
+    (((speedrun-practice-option hub2-hundo))
+      (speedrun-practice-hub2-hundo-start-run)
+      )
+    (((speedrun-practice-option hub3-hundo))
+      (speedrun-practice-hub3-hundo-start-run)
       )
     (else
       (speedrun-practice-temp-checkpoint)

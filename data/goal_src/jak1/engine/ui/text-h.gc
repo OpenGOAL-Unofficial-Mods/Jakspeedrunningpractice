@@ -776,6 +776,9 @@
   (practice-gondola-flut        #x1608)
   (practice-gondola-foot        #x1609)
 
+  (practice-hub2-hundo          #x160a)
+  (practice-hub3-hundo          #x160b)
+
   (hub1-options                 #x16fc)
   (hub2-options                 #x16fd)
   (hub3-options                 #x16fe)
