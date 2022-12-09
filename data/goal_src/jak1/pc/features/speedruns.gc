@@ -1,8 +1,6 @@
 ;;-*-Lisp-*-
 (in-package goal)
 
-(define-extern blocking-plane-destroy (function none))
-
 (define-extern speedrun-practice-spawn (function none)) ;; defined at end of this file
 (define-extern speedrun-practice-store-temp-checkpoint (function none)) ;; defined at end of this file
 
