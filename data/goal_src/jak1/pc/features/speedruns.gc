@@ -457,9 +457,9 @@
   (close-task-helper (game-task ogre-secret))
 
     ;; needed to remove blocking invis wall at end of MP
-  (let ((end-of-fc-racer (the racer (process-by-ename "racer-14"))))
-    (when end-of-fc-racer
-      (set! (-> end-of-fc-racer condition) 0) ;; I think any condition besides 3 works here? idk
+  (let ((end-of-mp-racer (the racer (process-by-ename "racer-14"))))
+    (when end-of-mp-racer
+      (set! (-> end-of-mp-racer condition) 0) ;; I think any condition besides 3 works here? idk
       )
     )
   (none)
