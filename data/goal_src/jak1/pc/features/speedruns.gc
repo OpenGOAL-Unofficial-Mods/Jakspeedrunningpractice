@@ -17,6 +17,7 @@
   (buttonskip)
   (gondola-flut)
   (gondola-foot)
+  (hub1-hundo)
   (hub2-hundo)
   (hub3-hundo)
   )
@@ -262,6 +263,22 @@
 (defun close-task-helper ((tsk game-task))
   (logior! (-> *game-info* task-perm-list data (the int tsk) status) (entity-perm-status real-complete))
   (close-specific-task! tsk (task-status need-resolution))
+  )
+
+(defun hub1-hundo-prep ()
+  ;; close tasks
+  (close-specific-task! (game-task intro) (task-status need-resolution))
+  (close-task-helper (game-task intro))
+  
+  (none)
+  )
+
+(defun speedrun-practice-hub1-hundo-start-run ()
+  (set! *practice-spawn-post-init* hub1-hundo-prep)
+  (initialize! *game-info* 'game (the-as game-save #f) "game-start")
+  (set! (-> *game-info* current-continue) (get-continue-by-name *game-info* "game-start"))
+  (speedrun-reset-common-settings)
+  (none)
   )
 
 (defun hub2-hundo-prep ()
@@ -525,6 +542,9 @@
       )
     (((speedrun-practice-option gondola-foot))
       (speedrun-practice-gondola-foot-start-run)
+      )
+    (((speedrun-practice-option hub1-hundo))
+      (speedrun-practice-hub1-hundo-start-run)
       )
     (((speedrun-practice-option hub2-hundo))
       (speedrun-practice-hub2-hundo-start-run)
