@@ -850,6 +850,7 @@
                         (= v1-2 (progress-screen hub3-options))
                         (= v1-2 (progress-screen hub4-options))
                         (= v1-2 (progress-screen skip-options))
+                        (= v1-2 (progress-screen hub-il-options))
                         )
                     )
                   )
