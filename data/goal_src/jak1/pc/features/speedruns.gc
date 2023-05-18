@@ -167,13 +167,21 @@
     )
 (define *tmp-flut?* #f)
 (define *tmp-zoomer?* #f)
+(define *full-hp?* #f)
+
+(defun custom-reset-multi-post-init ()
+  (when *full-hp?* (full-hp))
+  (cond
+    (*tmp-flut?* (get-on-flutflut))
+    (*tmp-zoomer?* (get-on-zoomer))
+    )
+  (none)
+  )
 
 (defun speedrun-practice-temp-checkpoint ()
   (when (-> *tmp-continue-point* level)
-    (cond
-      (*tmp-flut?* (set! *practice-spawn-post-init* get-on-flutflut))
-      (*tmp-zoomer?* (set! *practice-spawn-post-init* get-on-zoomer))
-      )
+    (set! *practice-spawn-post-init* custom-reset-multi-post-init)
+    
     ;; fully reset game if r2 held too
     (if (cpad-hold? 0 r2)  
       (initialize! *game-info* 'game (the-as game-save #f) "default")
@@ -504,6 +512,10 @@
 
       (set! *tmp-flut?* #f)
       (set! *tmp-zoomer?* #f)
+      (set! *full-hp?* (and (!= *target* #f)
+                            (= (-> *target* fact-info-target health) 3.0)
+                            (= (-> *target* fact-info-target eco-pill) 50.0)
+                            ))
       (case (-> *target* state)
         ((target-flut-stance)
           (set! *tmp-flut?* #t)
