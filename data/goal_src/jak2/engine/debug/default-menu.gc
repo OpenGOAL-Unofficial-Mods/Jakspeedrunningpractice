@@ -32,11 +32,20 @@
 
 ;; og:ignore-form:all-texture-tweak-adjust
 
+(defmacro dm-lambda-boolean-flag (val)
+  "helper macro for making boolean buttons that don't just access symbols directly"
+  `,(lambda (arg (msg debug-menu-msg))
+                            (if (= msg (debug-menu-msg press))
+                                (not! ,val)
+                                )
+                            ,val)
+  )
+
 ;; DECOMP BEGINS
 
 ;; this file is debug only
 (declare-file (debug))
-(when *debug-segment*
+
 (define *debug-menu-context* (new 'debug 'debug-menu-context))
 
 (define *dm-cam-mode-interpolation* 0)
@@ -70,78 +79,50 @@
 
 (defun dm-cam-settings-func ((arg0 cam-slave-options) (arg1 debug-menu-msg))
   (when (and (= arg1 (debug-menu-msg press)) *camera*)
-    (cond
-      ((zero? arg0)
-       (send-event *camera* 'toggle-slave-option 1)
+    (case arg0
+      (((cam-slave-options JUMP_PITCHES))
+        (if (not (setting-control-method-14 *setting-control* 'slave-options))
+          (set-setting-by-param *setting-control* 'slave-options 'clear 0 arg0)
+          (remove-setting-by-arg0 *setting-control* 'slave-options)
+          )
        )
-      ((= arg0 (cam-slave-options BUTT_CAM))
-       (send-event *camera* 'toggle-slave-option 2)
+      (((cam-slave-options BUTT_CAM)
+        (cam-slave-options SAME_SIDE)
+        (cam-slave-options MOVE_SPHERICAL)
+        (cam-slave-options ALLOW_Z_ROT)
+        (cam-slave-options COLLIDE)
+        (cam-slave-options FIND_HIDDEN_TARGET)
+        (cam-slave-options DRAG)
+        (cam-slave-options LINE_OF_SIGHT)
+        (cam-slave-options STICKY_ANGLE)
+        (cam-slave-options NO_ROTATE)
+        )
+       (send-event *camera* 'toggle-slave-option arg0)
        )
-      ((= arg0 (cam-slave-options SAME_SIDE))
-       (send-event *camera* 'toggle-slave-option 4)
-       )
-      ((= arg0 (cam-slave-options BUTT_CAM SAME_SIDE))
-       (send-event *camera* 'toggle-slave-option 128)
-       )
-      ((= arg0 (cam-slave-options MOVE_SPHERICAL))
-       (send-event *camera* 'toggle-slave-option 8)
-       )
-      ((= arg0 (cam-slave-options SAME_SIDE MOVE_SPHERICAL))
-       (set-setting-by-param *setting-control* 'slave-options 'clear 0 16)
-       )
-      ((= arg0 (cam-slave-options BUTT_CAM SAME_SIDE MOVE_SPHERICAL))
-       (send-event *camera* 'toggle-slave-option 64)
-       )
-      ((= arg0 (cam-slave-options ALLOW_Z_ROT))
-       (send-event *camera* 'toggle-slave-option 32)
-       )
-      ((= arg0 (cam-slave-options BUTT_CAM ALLOW_Z_ROT))
-       (send-event *camera* 'toggle-slave-option 512)
-       )
-      ((= arg0 (cam-slave-options SAME_SIDE ALLOW_Z_ROT))
-       (send-event *camera* 'toggle-slave-option #x4000)
-       )
-      ((= arg0 (cam-slave-options BUTT_CAM SAME_SIDE ALLOW_Z_ROT))
-       (send-event *camera* 'toggle-slave-option #x8000)
-       )
+      (else
+        (format 0 "Unrecognized camera settings menu item selected: ~I~%" arg0)
+        )
       )
     )
   (cond
     (*camera*
-      (cond
-        ((zero? arg0)
-         (logtest? (-> *camera* slave-options) 1)
-         )
-        ((= arg0 (cam-slave-options BUTT_CAM))
-         (logtest? (-> *camera* slave-options) 2)
-         )
-        ((= arg0 (cam-slave-options SAME_SIDE))
-         (logtest? (-> *camera* slave-options) 4)
-         )
-        ((= arg0 (cam-slave-options BUTT_CAM SAME_SIDE))
-         (logtest? (-> *camera* slave-options) 128)
-         )
-        ((= arg0 (cam-slave-options MOVE_SPHERICAL))
-         (logtest? (-> *camera* slave-options) 8)
-         )
-        ((= arg0 (cam-slave-options SAME_SIDE MOVE_SPHERICAL))
-         (not (setting-control-method-14 *setting-control* 'slave-options))
-         )
-        ((= arg0 (cam-slave-options BUTT_CAM SAME_SIDE MOVE_SPHERICAL))
-         (logtest? (-> *camera* slave-options) 64)
-         )
-        ((= arg0 (cam-slave-options ALLOW_Z_ROT))
-         (logtest? (-> *camera* slave-options) 32)
-         )
-        ((= arg0 (cam-slave-options BUTT_CAM ALLOW_Z_ROT))
-         (logtest? (-> *camera* slave-options) 512)
-         )
-        ((= arg0 (cam-slave-options SAME_SIDE ALLOW_Z_ROT))
-         (logtest? (-> *camera* slave-options) #x4000)
-         )
-        ((= arg0 (cam-slave-options BUTT_CAM SAME_SIDE ALLOW_Z_ROT))
-         (logtest? (-> *camera* slave-options) #x8000)
-         )
+      (case arg0
+        (((cam-slave-options JUMP_PITCHES))
+          (not (setting-control-method-14 *setting-control* 'slave-options))
+          )
+        (((cam-slave-options BUTT_CAM)
+          (cam-slave-options SAME_SIDE)
+          (cam-slave-options MOVE_SPHERICAL)
+          (cam-slave-options ALLOW_Z_ROT)
+          (cam-slave-options COLLIDE)
+          (cam-slave-options FIND_HIDDEN_TARGET)
+          (cam-slave-options DRAG)
+          (cam-slave-options LINE_OF_SIGHT)
+          (cam-slave-options STICKY_ANGLE)
+          (cam-slave-options NO_ROTATE)
+          )
+          (logtest? (-> *camera* slave-options) arg0)
+          )
         (else
           #f
           )
@@ -202,23 +183,23 @@
 
 (defun dm-cam-setting-float ((arg0 float) (arg1 debug-menu-msg) (arg2 float) (arg3 float))
   (when (= arg1 (debug-menu-msg press))
-    (case arg0
-      (('fov)
-       (if (not (setting-control-method-14 *setting-control* 'fov))
-           (set! arg2 64.0)
-           )
-       (set-setting-by-param *setting-control* 'fov #f (* 182.04445 arg2) 0)
-       (if *camera-combiner*
-           (set! (-> *camera-combiner* fov) (* 182.04445 arg2))
-           )
-       (if (and *camera* (-> *camera* slave))
-           (set! (-> *camera* slave 0 fov) (* 182.04445 arg2))
-           )
-       )
+    (let ((v1-2 arg0))
+      (when (= (the-as int v1-2) 'fov)
+        (if (not (setting-control-method-14 *setting-control* 'fov))
+            (set! arg2 64.0)
+            )
+        (set-setting-by-param *setting-control* 'fov #f (* 182.04445 arg2) 0)
+        (if *camera-combiner*
+            (set! (-> *camera-combiner* fov) (* 182.04445 arg2))
+            )
+        (if (and *camera* (-> *camera* slave))
+            (set! (-> *camera* slave 0 fov) (* 182.04445 arg2))
+            )
+        )
       )
     )
   (cond
-    ((= arg0 'fov)
+    ((= (the-as int arg0) 'fov)
      (cond
        ((setting-control-method-14 *setting-control* 'fov)
         (empty)
@@ -360,7 +341,7 @@
   (if (= arg1 (debug-menu-msg press))
       (start 'play (get-continue-by-name *game-info* arg0))
       )
-  (string= (-> (get-current-continue-point *game-info*) name) arg0)
+  (string= (-> (get-current-continue-forced *game-info*) name) arg0)
   )
 
 (defun dm-subdiv-draw-func ((arg0 int) (arg1 debug-menu-msg))
@@ -385,20 +366,68 @@
           )
       (cond
         ((zero? a1-1)
-         (set! (-> v1-3 base-strgif qword vector4w y) #x303e4000)
-         (set! (-> v1-3 base-strgif qword vector4w x) #x303ec000)
+         (set! (-> v1-3 base-strgif str-prim)
+               (new 'static 'gif-tag-prim
+                 :pre #x1
+                 :prim (new 'static 'gs-prim :prim (gs-prim-type tri-strip) :iip #x1 :tme #x1 :fge #x1 :abe #x1)
+                 :nreg #x3
+                 )
+               )
+         (set! (-> v1-3 base-strgif fan-prim)
+               (new 'static 'gif-tag-prim
+                 :pre #x1
+                 :prim (new 'static 'gs-prim :prim (gs-prim-type tri-fan) :iip #x1 :tme #x1 :fge #x1 :abe #x1)
+                 :nreg #x3
+                 )
+               )
          )
         ((= a1-1 1)
-         (set! (-> v1-3 base-strgif qword vector4w y) #x303d4000)
-         (set! (-> v1-3 base-strgif qword vector4w x) #x303d4000)
+         (set! (-> v1-3 base-strgif str-prim)
+               (new 'static 'gif-tag-prim
+                 :pre #x1
+                 :prim (new 'static 'gs-prim :prim (gs-prim-type line-strip) :iip #x1 :tme #x1 :fge #x1 :abe #x1)
+                 :nreg #x3
+                 )
+               )
+         (set! (-> v1-3 base-strgif fan-prim)
+               (new 'static 'gif-tag-prim
+                 :pre #x1
+                 :prim (new 'static 'gs-prim :prim (gs-prim-type line-strip) :iip #x1 :tme #x1 :fge #x1 :abe #x1)
+                 :nreg #x3
+                 )
+               )
          )
         ((= a1-1 2)
-         (set! (-> v1-3 base-strgif qword vector4w y) #x30364000)
-         (set! (-> v1-3 base-strgif qword vector4w x) #x3036c000)
+         (set! (-> v1-3 base-strgif str-prim)
+               (new 'static 'gif-tag-prim
+                 :pre #x1
+                 :prim (new 'static 'gs-prim :prim (gs-prim-type tri-strip) :iip #x1 :fge #x1 :abe #x1)
+                 :nreg #x3
+                 )
+               )
+         (set! (-> v1-3 base-strgif fan-prim)
+               (new 'static 'gif-tag-prim
+                 :pre #x1
+                 :prim (new 'static 'gs-prim :prim (gs-prim-type tri-fan) :iip #x1 :fge #x1 :abe #x1)
+                 :nreg #x3
+                 )
+               )
          )
         ((= a1-1 3)
-         (set! (-> v1-3 base-strgif qword vector4w y) #x30354000)
-         (set! (-> v1-3 base-strgif qword vector4w x) #x3036c000)
+         (set! (-> v1-3 base-strgif str-prim)
+               (new 'static 'gif-tag-prim
+                 :pre #x1
+                 :prim (new 'static 'gs-prim :prim (gs-prim-type line-strip) :iip #x1 :fge #x1 :abe #x1)
+                 :nreg #x3
+                 )
+               )
+         (set! (-> v1-3 base-strgif fan-prim)
+               (new 'static 'gif-tag-prim
+                 :pre #x1
+                 :prim (new 'static 'gs-prim :prim (gs-prim-type tri-fan) :iip #x1 :fge #x1 :abe #x1)
+                 :nreg #x3
+                 )
+               )
          )
         )
       )
@@ -482,7 +511,7 @@
 (defun dm-col-rend-cspec-toggle ((arg0 uint) (arg1 debug-menu-msg))
   (let ((v1-0 *col-rend*))
     (if (= arg1 (debug-menu-msg press))
-        (logxor! (-> v1-0 cspec) arg0)
+        (logxor! (-> v1-0 cspec) (the-as uint arg0))
         )
     (logtest? (-> v1-0 cspec) arg0)
     )
@@ -765,12 +794,12 @@
           (logior (logclear (-> *game-info* debug-features) (/ arg0 8)) (logand (-> *game-info* features) (/ arg0 8)))
           )
     (if (logtest? (-> *game-info* features) (game-feature gun-yellow gun-red gun-blue gun-dark))
-        (logior! (-> *game-info* features) (game-feature unk-game-feature-06))
-        (logclear! (-> *game-info* features) (game-feature unk-game-feature-06))
+        (logior! (-> *game-info* features) (game-feature gun))
+        (logclear! (-> *game-info* features) (game-feature gun))
         )
     (if (logtest? (-> *game-info* debug-features) (game-feature gun-yellow gun-red gun-blue gun-dark))
-        (logior! (-> *game-info* debug-features) (game-feature unk-game-feature-06))
-        (logclear! (-> *game-info* debug-features) (game-feature unk-game-feature-06))
+        (logior! (-> *game-info* debug-features) (game-feature gun))
+        (logclear! (-> *game-info* debug-features) (game-feature gun))
         )
     )
   (logtest? (-> *game-info* features) (/ arg0 8))
@@ -835,7 +864,7 @@
   )
 
 (defun dm-vu1-user-all-pick-func ((arg0 symbol) (arg1 debug-menu-msg))
-  (let ((v1-1 (-> (new 'static 'array uint64 1 #x5fffffff8) 0)))
+  (let ((v1-1 (the-as uint #x5fffffff8)))
     (if (= arg1 (debug-menu-msg press))
         (set! (-> *display* vu1-enable-user-menu) (the-as vu1-renderer-mask v1-1))
         )
@@ -909,7 +938,7 @@
                   )
              (let ((f2-1 (-> (the-as prototype-bucket-tie gp-0) dists w)))
                (when (= arg1 (debug-menu-msg press))
-                 (logior! (-> (the-as prototype-bucket-tie gp-0) flags) 8)
+                 (logior! (-> (the-as prototype-bucket-tie gp-0) flags) (prototype-flags vanish))
                  (set! f1-2 (fmax (fmin (* 4096.0 arg2) f0-0) (+ 4096.0 f2-1)))
                  (let ((f0-1 (fmax f0-0 (+ 4096.0 f1-2))))
                    (set! (-> (the-as prototype-bucket-tie gp-0) tie-rvanish) (/ 128.0 (- f0-1 f1-2)))
@@ -946,7 +975,7 @@
                    (f1-2 (-> (the-as prototype-bucket-tie gp-0) dists w))
                    )
                (when (= arg1 (debug-menu-msg press))
-                 (logior! (-> (the-as prototype-bucket-tie gp-0) flags) 8)
+                 (logior! (-> (the-as prototype-bucket-tie gp-0) flags) (prototype-flags vanish))
                  (set! f0-0 (fmax (* 4096.0 arg2) (+ 4096.0 f2-1)))
                  (let ((f1-4 (fmax (fmin f2-1 f0-0) (+ 4096.0 f1-2))))
                    (set! (-> (the-as prototype-bucket-tie gp-0) tie-rvanish) (/ 128.0 (- f0-0 f1-4)))
@@ -978,10 +1007,9 @@
   (= *bug-report-output-mode* arg0)
   )
 
-;; WARN: Return type mismatch int vs none.
 (defun dm-bug-report-report-pick-func ((arg0 symbol) (arg1 debug-menu-msg))
   (if (= arg1 (debug-menu-msg press))
-      (bug-report-display)
+      (bug-report-display arg0)
       )
   0
   (none)
@@ -1053,9 +1081,9 @@
     (cond
       (v1-0
         (if (= arg1 (debug-menu-msg press))
-            (logxor! (-> v1-0 flags) 1)
+            (logxor! (-> v1-0 flags) (prototype-flags disable))
             )
-        (zero? (logand (-> v1-0 flags) 1))
+        (not (logtest? (-> v1-0 flags) (prototype-flags disable)))
         )
       (else
         #f
@@ -1072,7 +1100,6 @@
 
 (define *enable-instance-tie-menu* (the-as debug-menu #f))
 
-;; WARN: Return type mismatch int vs none.
 (defun build-instance-list ((arg0 object))
   (debug-menu-remove-all-items *instance-shrub-menu*)
   (debug-menu-remove-all-items *instance-tie-menu*)
@@ -1090,7 +1117,7 @@
                  (let ((s3-0 (-> (the-as drawable-tree-instance-shrub v1-7) info prototype-inline-array-shrub)))
                    (dotimes (s2-0 (-> s3-0 length))
                      (let ((a1-4
-                             (new 'global 'debug-menu-item-flag (-> s3-0 data s2-0 name) (-> s3-0 data s2-0 name) dm-instance-pick-func)
+                             (new 'debug 'debug-menu-item-flag (-> s3-0 data s2-0 name) (-> s3-0 data s2-0 name) dm-instance-pick-func)
                              )
                            )
                        (debug-menu-append-item *instance-shrub-menu* a1-4)
@@ -1184,8 +1211,8 @@
                                          (string= (the-as string s5-1) "outro-nest")
                                          )
                  )
-        (set! (-> palout memory-mode) (the-as uint 4))
-        (set! (-> hiphog memory-mode) (the-as uint 1))
+        (set! (-> palout memory-mode) (load-buffer-mode borrow))
+        (set! (-> hiphog memory-mode) (load-buffer-mode small-center))
         )
       (process-spawn scene-player :init scene-player-init s5-1 #t (car arg0))
       )
@@ -1252,7 +1279,7 @@
             )
         (t9-32 a0-32 a1-32 (- (-> a2-29 data 0 end-time) (-> a2-29 data 0 start-time)))
         )
-      (compute-memory-usage (-> *level* level0) #f)
+      (compute-memory-usage! (-> *level* level0) #f)
       (format #t "   (set! *camera-old-tfrag-bytes* ~D)~%" (+ (-> *level* level0 mem-usage-block data 1 total)
                                                               (-> *level* level0 mem-usage-block data 2 total)
                                                               (-> *level* level0 mem-usage-block data 3 total)
@@ -1408,37 +1435,37 @@
           )
         (debug-menu-append-item s4-1 s3-2)
         )
-      (let ((a1-36 (new 'debug 'debug-menu-item-flag "Butt cam" 0 dm-cam-settings-func)))
+      (let ((a1-36 (new 'debug 'debug-menu-item-flag "Butt cam" (cam-slave-options BUTT_CAM) dm-cam-settings-func)))
         (debug-menu-append-item s4-1 a1-36)
         )
-      (let ((a1-38 (new 'debug 'debug-menu-item-flag "Same side" 1 dm-cam-settings-func)))
+      (let ((a1-38 (new 'debug 'debug-menu-item-flag "Same side" (cam-slave-options SAME_SIDE) dm-cam-settings-func)))
         (debug-menu-append-item s4-1 a1-38)
         )
-      (let ((a1-40 (new 'debug 'debug-menu-item-flag "Move spherical" 2 dm-cam-settings-func)))
+      (let ((a1-40 (new 'debug 'debug-menu-item-flag "Move spherical" (cam-slave-options MOVE_SPHERICAL) dm-cam-settings-func)))
         (debug-menu-append-item s4-1 a1-40)
         )
-      (let ((a1-42 (new 'debug 'debug-menu-item-flag "Drag" 3 dm-cam-settings-func)))
+      (let ((a1-42 (new 'debug 'debug-menu-item-flag "Drag" (cam-slave-options DRAG) dm-cam-settings-func)))
         (debug-menu-append-item s4-1 a1-42)
         )
-      (let ((a1-44 (new 'debug 'debug-menu-item-flag "Allow Z rot" 4 dm-cam-settings-func)))
+      (let ((a1-44 (new 'debug 'debug-menu-item-flag "Allow Z rot" (cam-slave-options ALLOW_Z_ROT) dm-cam-settings-func)))
         (debug-menu-append-item s4-1 a1-44)
         )
-      (let ((a1-46 (new 'debug 'debug-menu-item-flag "Pitch for jump" 6 dm-cam-settings-func)))
+      (let ((a1-46 (new 'debug 'debug-menu-item-flag "Pitch for jump" (cam-slave-options JUMP_PITCHES) dm-cam-settings-func)))
         (debug-menu-append-item s4-1 a1-46)
         )
-      (let ((a1-48 (new 'debug 'debug-menu-item-flag "Find hidden target" 7 dm-cam-settings-func)))
+      (let ((a1-48 (new 'debug 'debug-menu-item-flag "Find hidden target" (cam-slave-options FIND_HIDDEN_TARGET) dm-cam-settings-func)))
         (debug-menu-append-item s4-1 a1-48)
         )
-      (let ((a1-50 (new 'debug 'debug-menu-item-flag "Collide" 8 dm-cam-settings-func)))
+      (let ((a1-50 (new 'debug 'debug-menu-item-flag "Collide" (cam-slave-options COLLIDE) dm-cam-settings-func)))
         (debug-menu-append-item s4-1 a1-50)
         )
-      (let ((a1-52 (new 'debug 'debug-menu-item-flag "Line of Sight" 9 dm-cam-settings-func)))
+      (let ((a1-52 (new 'debug 'debug-menu-item-flag "Line of Sight" (cam-slave-options LINE_OF_SIGHT) dm-cam-settings-func)))
         (debug-menu-append-item s4-1 a1-52)
         )
-      (let ((a1-54 (new 'debug 'debug-menu-item-flag "No Rotate" 10 dm-cam-settings-func)))
+      (let ((a1-54 (new 'debug 'debug-menu-item-flag "No Rotate" (cam-slave-options NO_ROTATE) dm-cam-settings-func)))
         (debug-menu-append-item s4-1 a1-54)
         )
-      (let ((a1-56 (new 'debug 'debug-menu-item-flag "Sticky Angle" 11 dm-cam-settings-func)))
+      (let ((a1-56 (new 'debug 'debug-menu-item-flag "Sticky Angle" (cam-slave-options STICKY_ANGLE) dm-cam-settings-func)))
         (debug-menu-append-item s4-1 a1-56)
         )
       (let ((s3-3 (new 'debug 'debug-menu-item-var "Interp Frms" 40 80)))
@@ -1675,7 +1702,12 @@
                     (cond
                       (a0-3
                         (when (= arg1 (debug-menu-msg press))
-                          0 ;; TODO - broken
+                          (let ((a1-8 (the-as object (* (the-as int (-> a0-3 next (-> v1-1 index) shader)) 16))))
+                            (while (nonzero? (the-as int a1-8))
+                              (set! (-> (the-as adgif-shader a1-8) tex1 k) (the-as int arg2))
+                              (set! a1-8 (* (-> (the-as adgif-shader a1-8) next shader) 16))
+                              )
+                            )
                           )
                         (let ((v1-8 (the-as object (* (-> a0-3 next (-> v1-1 index) shader) 16))))
                           (if (nonzero? (the-as uint v1-8))
@@ -1868,7 +1900,12 @@
                     (cond
                       (a0-3
                         (when (= arg1 (debug-menu-msg press))
-                          ;; TODO - broken
+                          (let ((a1-8 (the-as object (* (the-as int (-> a0-3 next (-> v1-1 index) shader)) 16))))
+                            (while (nonzero? (the-as int a1-8))
+                              (set! (-> (the-as adgif-shader a1-8) tex0 tfx) (the-as int arg2))
+                              (set! a1-8 (* (-> (the-as adgif-shader a1-8) next shader) 16))
+                              )
+                            )
                           )
                         (let ((v1-8 (the-as object (* (-> a0-3 next (-> v1-1 index) shader) 16))))
                           (if (nonzero? (the-as uint v1-8))
@@ -2061,7 +2098,12 @@
                     (cond
                       (a0-3
                         (when (= arg1 (debug-menu-msg press))
-                          ;; TODO - broken
+                          (let ((a1-8 (the-as object (* (the-as int (-> a0-3 next (-> v1-1 index) shader)) 16))))
+                            (while (nonzero? (the-as int a1-8))
+                              (set! (-> (the-as adgif-shader a1-8) tex0 th) (the-as int arg2))
+                              (set! a1-8 (* (-> (the-as adgif-shader a1-8) next shader) 16))
+                              )
+                            )
                           )
                         (let ((v1-8 (the-as object (* (-> a0-3 next (-> v1-1 index) shader) 16))))
                           (if (nonzero? (the-as uint v1-8))
@@ -2352,7 +2394,12 @@
                     (cond
                       (a0-3
                         (when (= arg1 (debug-menu-msg press))
-                          ;; TODO - broken
+                          (let ((a1-8 (the-as object (* (the-as int (-> a0-3 next (-> v1-1 index) shader)) 16))))
+                            (while (nonzero? (the-as int a1-8))
+                              (set! (-> (the-as adgif-shader a1-8) clamp minv) (the-as int arg2))
+                              (set! a1-8 (* (-> (the-as adgif-shader a1-8) next shader) 16))
+                              )
+                            )
                           )
                         (let ((v1-8 (the-as object (* (-> a0-3 next (-> v1-1 index) shader) 16))))
                           (if (nonzero? (the-as uint v1-8))
@@ -2398,7 +2445,12 @@
                     (cond
                       (a0-3
                         (when (= arg1 (debug-menu-msg press))
-                          ;; TODO - broken
+                          (let ((a1-8 (the-as object (* (the-as int (-> a0-3 next (-> v1-1 index) shader)) 16))))
+                            (while (nonzero? (the-as int a1-8))
+                              (set! (-> (the-as adgif-shader a1-8) clamp maxv) (the-as int arg2))
+                              (set! a1-8 (* (-> (the-as adgif-shader a1-8) next shader) 16))
+                              )
+                            )
                           )
                         (let ((v1-8 (the-as object (* (-> a0-3 next (-> v1-1 index) shader) 16))))
                           (if (nonzero? (the-as uint v1-8))
@@ -2575,18 +2627,20 @@
   (let ((gp-0 (/ (the-as int arg0) 8)))
     (when (= arg1 (debug-menu-msg press))
       (if (cpad-hold? 0 l1)
-          (task-node-open! (the-as game-task gp-0))
-          (task-node-close! (the-as game-task gp-0))
+          (task-node-open! (the-as game-task-node gp-0))
+          (task-node-close! (the-as game-task-node gp-0))
           )
       )
-    (if (and (not (task-node-closed? (the-as game-task-node gp-0))) (not (task-node-open? (the-as game-task gp-0))))
+    (if (and (not (task-node-closed? (the-as game-task-node gp-0)))
+             (not (task-node-open? (the-as game-task-node gp-0)))
+             )
         (return 'invalid)
         )
     (task-node-closed? (the-as game-task-node gp-0))
     )
   )
 
-(defun debug-menu-make-continue-sub-menu ((arg0 debug-menu-context) (arg1 symbol))
+(defun debug-menu-make-continue-sub-menu ((arg0 game-info) (arg1 symbol))
   (local-vars
     (sv-16 (function symbol type object object pair))
     (sv-32 symbol)
@@ -2613,26 +2667,26 @@
                     (a0-5 arg1)
                     )
                 (when (if (= a0-5 'test)
-                          (logtest? (continue-flags cf17) (-> (the-as continue-point v1-2) flags))
+                          (logtest? (continue-flags test) (-> (the-as continue-point v1-2) flags))
                           #t
                           )
                   (let ((s2-0 (method-of-type pair new))
-                        (s1-0 'global)
+                        (s1-0 'debug)
                         (s0-0 pair)
                         )
                     (set! sv-16 (method-of-type pair new))
-                    (set! sv-32 'global)
+                    (set! sv-32 'debug)
                     (set! sv-48 pair)
                     (set! sv-64 'flag)
                     (set! sv-80 (method-of-type pair new))
-                    (set! sv-96 'global)
+                    (set! sv-96 'debug)
                     (set! sv-112 pair)
                     (set! sv-128 (-> (the-as continue-point v1-2) name))
                     (set! sv-144 (method-of-type pair new))
-                    (set! sv-160 'global)
+                    (set! sv-160 'debug)
                     (set! sv-176 pair)
                     (set! sv-192 (-> (the-as continue-point v1-2) name))
-                    (let* ((a3-1 (cons 'dm-current-continue '()))
+                    (let* ((a3-1 (dcons 'dm-current-continue '()))
                            (a3-2 (sv-144 sv-160 sv-176 sv-192 a3-1))
                            (a3-3 (sv-80 sv-96 sv-112 sv-128 a3-2))
                            )
@@ -2651,12 +2705,12 @@
     (let ((a3-5 '()))
       (let ((a2-6 (car s5-0)))
         (while (not (null? s5-0))
-          (set! a3-5 (cons a2-6 a3-5))
+          (set! a3-5 (dcons a2-6 a3-5))
           (set! s5-0 (cdr s5-0))
           (set! a2-6 (car s5-0))
           )
         )
-      (cons 'menu (cons (symbol->string arg1) a3-5))
+      (dcons 'menu (dcons (symbol->string arg1) a3-5))
       )
     )
   )
@@ -2684,22 +2738,22 @@
           (let ((v1-4 (-> s4-0 s3-0)))
             (when (= (-> v1-4 level) arg0)
               (let ((s2-0 (method-of-type pair new))
-                    (s1-0 'global)
+                    (s1-0 'debug)
                     (s0-0 pair)
                     )
                 (set! sv-16 (method-of-type pair new))
-                (set! sv-32 'global)
+                (set! sv-32 'debug)
                 (set! sv-48 pair)
                 (set! sv-64 'flag)
                 (set! sv-80 (method-of-type pair new))
-                (set! sv-96 'global)
+                (set! sv-96 'debug)
                 (set! sv-112 pair)
                 (set! sv-128 (-> v1-4 name))
                 (set! sv-144 (method-of-type pair new))
-                (set! sv-160 'global)
+                (set! sv-160 'debug)
                 (set! sv-176 pair)
                 (set! sv-192 (* s3-0 8))
-                (let* ((a3-1 (cons 'dm-task-menu-pick-func '()))
+                (let* ((a3-1 (dcons 'dm-task-menu-pick-func '()))
                        (a3-2 (sv-144 sv-160 sv-176 sv-192 a3-1))
                        (a3-3 (sv-80 sv-96 sv-112 sv-128 a3-2))
                        )
@@ -2711,7 +2765,7 @@
           )
         )
       )
-    (cons 'menu (cons (symbol->string arg0) gp-0))
+    (dcons 'menu (dcons (symbol->string arg0) gp-0))
     )
   )
 
@@ -2762,7 +2816,6 @@
     )
   )
 
-;; WARN: Return type mismatch int vs none.
 (defun dm-play-task-with-continue ((arg0 game-task) (arg1 string))
   (let* ((t9-0 play-task)
          (a1-1 'debug)
@@ -2857,8 +2910,7 @@
   (none)
   )
 
-;; WARN: Return type mismatch debug-menu-node vs none.
-(defun debug-menu-make-play-menu ((arg0 symbol))
+(defun debug-menu-make-play-menu ((arg0 debug-menu-context))
   (local-vars
     (sv-16 symbol)
     (sv-32 type)
@@ -2877,22 +2929,22 @@
       (let ((v1-4 (-> *game-info* play-list s4-0)))
         (when (-> v1-4 play-continue)
           (let ((s3-0 (method-of-type pair new))
-                (s2-0 'global)
+                (s2-0 'debug)
                 (s1-0 pair)
                 (s0-0 (method-of-type pair new))
                 )
-            (set! sv-16 'global)
+            (set! sv-16 'debug)
             (set! sv-32 pair)
             (set! sv-48 'function)
             (set! sv-64 (method-of-type pair new))
-            (set! sv-80 'global)
+            (set! sv-80 'debug)
             (set! sv-96 pair)
             (set! sv-112 (-> v1-4 name))
             (set! sv-128 (method-of-type pair new))
-            (set! sv-144 'global)
+            (set! sv-144 'debug)
             (set! sv-160 pair)
             (set! sv-176 (* s4-0 8))
-            (let* ((a3-1 (cons 'dm-play-task '()))
+            (let* ((a3-1 (dcons 'dm-play-task '()))
                    (a3-2 (sv-128 sv-144 sv-160 sv-176 a3-1))
                    (a3-3 (sv-64 sv-80 sv-96 sv-112 a3-2))
                    )
@@ -2902,9 +2954,8 @@
           )
         )
       )
-    (debug-menu-make-from-template (the-as debug-menu-context arg0) (cons 'menu (cons "Play" gp-0)))
+    (debug-menu-make-from-template arg0 (dcons 'menu (dcons "Play" gp-0)))
     )
-  (none)
   )
 
 (defun dm-anim-tester-flag-func ((arg0 int) (arg1 debug-menu-msg))
@@ -2954,7 +3005,7 @@
 (defun dm-pilot-mode ((arg0 object))
   "TODO - what is the third arg to target's change-mode?"
   (if (not *target*)
-      (start 'debug (get-current-continue-point *game-info*))
+      (start 'debug (get-current-continue-forced *game-info*))
       )
   (send-event *target* 'change-mode 'pilot #f arg0 #t)
   (none)
@@ -2964,7 +3015,7 @@
 (defun dm-pilot-race-mode ((arg0 object))
   "TODO - what is the third arg to target's change-mode?"
   (if (not *target*)
-      (start 'debug (get-current-continue-point *game-info*))
+      (start 'debug (get-current-continue-forced *game-info*))
       )
   (send-event *target* 'change-mode 'pilot-race #f arg0 #t)
   (none)
@@ -3008,8 +3059,8 @@
            (flag "Use menu subdiv" *artist-use-menu-subdiv* dm-boolean-toggle-pick-func)
            (float-var "Subdiv Close" close dm-subdiv-float 10 1 #t 1 200 1)
            (float-var "Subdiv Far" far dm-subdiv-float 10 1 #t 1 200 1)
-           (function "Target Start" #f (lambda () (start 'debug (get-current-continue-point *game-info*))))
-           (function "Target Stop" #f (lambda () (stop 'debug)))
+           (function "Target Start" #f ,(lambda () (start 'debug (get-current-continue-forced *game-info*))))
+           (function "Target Stop" #f ,(lambda () (stop 'debug)))
            (menu
              "Anim Tester"
              (int-var "Speed" anim-speed dm-subdiv-int 10 10 #t -300 1000)
@@ -3029,37 +3080,37 @@
            (function
              "Mike F"
              #f
-             (lambda () (debug-actor "drill-crane-14") (send-event (the-as process-tree *debug-actor*) 'die))
+             ,(lambda () (debug-actor "drill-crane-14") (send-event (the-as process-tree *debug-actor*) 'die))
              )
            (function
              "Editor"
              #f
-             (lambda ()
-               (kill-by-type editable-player *active-pool*)
-               (process-spawn editable-player :init editable-player-init #f :to *entity-pool*)
-               (set-master-mode 'game)
-               (none)
-               )
+             ,(lambda ()
+                (kill-by-type editable-player *active-pool*)
+                (process-spawn editable-player :init editable-player-init #f :to *entity-pool*)
+                (set-master-mode 'game)
+                (none)
+                )
              )
            (flag
              "Screen shot highres enable"
              #f
-             (lambda ((arg0 object) (arg1 debug-menu-msg))
-               (if (= arg1 (debug-menu-msg press))
-                   (set! (-> *screen-shot-work* highres-enable) (not (-> *screen-shot-work* highres-enable)))
-                   )
-               (-> *screen-shot-work* highres-enable)
-               )
+             ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                (if (= arg1 (debug-menu-msg press))
+                    (set! (-> *screen-shot-work* highres-enable) (not (-> *screen-shot-work* highres-enable)))
+                    )
+                (-> *screen-shot-work* highres-enable)
+                )
              )
            (flag
              "Screen shot hud enable"
              #f
-             (lambda ((arg0 object) (arg1 debug-menu-msg))
-               (if (= arg1 (debug-menu-msg press))
-                   (set! (-> *screen-shot-work* hud-enable) (not (-> *screen-shot-work* hud-enable)))
-                   )
-               (-> *screen-shot-work* hud-enable)
-               )
+             ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                (if (= arg1 (debug-menu-msg press))
+                    (set! (-> *screen-shot-work* hud-enable) (not (-> *screen-shot-work* hud-enable)))
+                    )
+                (-> *screen-shot-work* hud-enable)
+                )
              )
            )
         )
@@ -3070,63 +3121,63 @@
         arg0
         '(menu
            "Game"
-           (function "New Game" #f (lambda () (initialize! *game-info* 'game (the-as game-save #f) (the-as string #f))))
-           (function "New Life" #f (lambda () (initialize! *game-info* 'dead (the-as game-save #f) (the-as string #f))))
+           (function "New Game" #f ,(lambda () (initialize! *game-info* 'game (the-as game-save #f) (the-as string #f))))
+           (function "New Life" #f ,(lambda () (initialize! *game-info* 'dead (the-as game-save #f) (the-as string #f))))
            (function
              "Reset Game"
              #f
-             (lambda ()
-               (set! (-> *game-info* mode) 'debug)
-               (initialize! *game-info* 'game (the-as game-save #f) (the-as string #f))
-               )
+             ,(lambda ()
+                (set! (-> *game-info* mode) 'debug)
+                (initialize! *game-info* 'game (the-as game-save #f) (the-as string #f))
+                )
              )
-           (function "Reset Actors" #f (lambda () (reset-actors 'debug) (none)))
-           (function "Save Game" #f (lambda () (auto-save-command 'save 0 0 *default-pool* #f) (none)))
-           (function "Load Game" #f (lambda () (auto-save-command 'restore 0 0 *default-pool* #f) (none)))
-           (flag "Target" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
-                               (when (= arg1 (debug-menu-msg press))
-                                 (if *target*
-                                     (stop 'debug)
-                                     (start 'debug (get-current-continue-point *game-info*))
-                                     )
-                                 )
-                               *target*
-                               )
+           (function "Reset Actors" #f ,(lambda () (reset-actors 'debug) (none)))
+           (function "Save Game" #f ,(lambda () (auto-save-command 'save 0 0 *default-pool* #f) (none)))
+           (function "Load Game" #f ,(lambda () (auto-save-command 'restore 0 0 *default-pool* #f) (none)))
+           (flag "Target" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                                (when (= arg1 (debug-menu-msg press))
+                                  (if *target*
+                                      (stop 'debug)
+                                      (start 'debug (get-current-continue-forced *game-info*))
+                                      )
+                                  )
+                                *target*
+                                )
                  )
            (flag "Game Mode" play dm-game-mode-pick-func)
            (flag "Debug Mode" debug dm-game-mode-pick-func)
            (function
              "Stop Watch Start"
              #f
-             (lambda ()
-               (remove-by-param0 *debug-engine* stop-watch-display)
-               (add-connection *debug-engine* *dproc* stop-watch-display *dproc* *stdcon0* #f)
-               (set! (-> *game-info* stop-watch-start) (the-as uint (-> *display* base-clock frame-counter)))
-               (set! (-> *game-info* stop-watch-stop) (the-as uint 0))
-               (format #t "Stop watch started!~%")
-               (none)
-               )
+             ,(lambda ()
+                (remove-by-param0 *debug-engine* stop-watch-display)
+                (add-connection *debug-engine* *dproc* stop-watch-display *dproc* *stdcon0* #f)
+                (set! (-> *game-info* stop-watch-start) (the-as uint (-> *display* base-clock frame-counter)))
+                (set! (-> *game-info* stop-watch-stop) (the-as uint 0))
+                (format #t "Stop watch started!~%")
+                (none)
+                )
              )
            (function
              "Stop Watch Stop"
              #f
-             (lambda ()
-               (remove-by-param0 *debug-engine* stop-watch-display)
-               (set! (-> *game-info* stop-watch-stop) (the-as uint (-> *display* base-clock frame-counter)))
-               (let ((v1-7 (- (-> *game-info* stop-watch-stop) (-> *game-info* stop-watch-start))))
-                 (format
-                   #t
-                   "Stop watch elasped time was ~D:~D:~D~%"
-                   (/ (the-as int v1-7) #x4650)
-                   (/ (mod (the-as int v1-7) #x4650) 300)
-                   (/ (* 100 (mod (the-as int v1-7) 300)) 300)
-                   )
-                 )
-               (none)
-               )
+             ,(lambda ()
+                (remove-by-param0 *debug-engine* stop-watch-display)
+                (set! (-> *game-info* stop-watch-stop) (the-as uint (-> *display* base-clock frame-counter)))
+                (let ((v1-7 (- (-> *game-info* stop-watch-stop) (-> *game-info* stop-watch-start))))
+                  (format
+                    #t
+                    "Stop watch elasped time was ~D:~D:~D~%"
+                    (/ (the-as int v1-7) #x4650)
+                    (/ (mod (the-as int v1-7) #x4650) 300)
+                    (/ (* 100 (mod (the-as int v1-7) 300)) 300)
+                    )
+                  )
+                (none)
+                )
              )
-           (function "Continue Start" #f (lambda () (start 'play (-> *game-info* current-continue))))
-           (function "Kiosk Reset" #f (lambda () (auto-save-command 'restore 0 0 *default-pool* #f) (none)))
+           (function "Continue Start" #f ,(lambda () (start 'play (-> *game-info* current-continue))))
+           (function "Kiosk Reset" #f ,(lambda () (auto-save-command 'restore 0 0 *default-pool* #f) (none)))
            (menu
              "Secrets"
              (flag "toggle-beard" 1 dm-game-secret-toggle-pick-func)
@@ -3153,21 +3204,21 @@
              (float-var
                "sfx-volume"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *setting-control* (nonzero? *setting-control*))
-                        (set! (-> *setting-control* user-default sfx-volume) arg2)
-                        )
-                    )
-                   ((or (not *setting-control*) (zero? *setting-control*))
-                    0.0
-                    )
-                   (else
-                     (-> *setting-control* user-default sfx-volume)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *setting-control* (nonzero? *setting-control*))
+                         (set! (-> *setting-control* user-default sfx-volume) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *setting-control*) (zero? *setting-control*))
+                     0.0
+                     )
+                    (else
+                      (-> *setting-control* user-default sfx-volume)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.01)
                #t
@@ -3178,21 +3229,21 @@
              (float-var
                "ambient-volume"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *setting-control* (nonzero? *setting-control*))
-                        (set! (-> *setting-control* user-default ambient-volume) arg2)
-                        )
-                    )
-                   ((or (not *setting-control*) (zero? *setting-control*))
-                    0.0
-                    )
-                   (else
-                     (-> *setting-control* user-default ambient-volume)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *setting-control* (nonzero? *setting-control*))
+                         (set! (-> *setting-control* user-default ambient-volume) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *setting-control*) (zero? *setting-control*))
+                     0.0
+                     )
+                    (else
+                      (-> *setting-control* user-default ambient-volume)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.01)
                #t
@@ -3203,21 +3254,21 @@
              (float-var
                "music-volume"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *setting-control* (nonzero? *setting-control*))
-                        (set! (-> *setting-control* user-default music-volume) arg2)
-                        )
-                    )
-                   ((or (not *setting-control*) (zero? *setting-control*))
-                    0.0
-                    )
-                   (else
-                     (-> *setting-control* user-default music-volume)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *setting-control* (nonzero? *setting-control*))
+                         (set! (-> *setting-control* user-default music-volume) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *setting-control*) (zero? *setting-control*))
+                     0.0
+                     )
+                    (else
+                      (-> *setting-control* user-default music-volume)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.01)
                #t
@@ -3228,21 +3279,21 @@
              (float-var
                "dialog-volume"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *setting-control* (nonzero? *setting-control*))
-                        (set! (-> *setting-control* user-default dialog-volume) arg2)
-                        )
-                    )
-                   ((or (not *setting-control*) (zero? *setting-control*))
-                    0.0
-                    )
-                   (else
-                     (-> *setting-control* user-default dialog-volume)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *setting-control* (nonzero? *setting-control*))
+                         (set! (-> *setting-control* user-default dialog-volume) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *setting-control*) (zero? *setting-control*))
+                     0.0
+                     )
+                    (else
+                      (-> *setting-control* user-default dialog-volume)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.01)
                #t
@@ -3275,32 +3326,32 @@
              (flag
                "play-hints "
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg))
-                 (if (= arg1 (debug-menu-msg press))
-                     (set! (-> *setting-control* user-default play-hints) (not (-> *setting-control* user-default play-hints)))
-                     )
-                 (the-as uint (-> *setting-control* user-default play-hints))
-                 )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                  (if (= arg1 (debug-menu-msg press))
+                      (set! (-> *setting-control* user-default play-hints) (not (-> *setting-control* user-default play-hints)))
+                      )
+                  (the-as uint (-> *setting-control* user-default play-hints))
+                  )
                )
              (flag
                "subtitle "
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg))
-                 (if (= arg1 (debug-menu-msg press))
-                     (set! (-> *setting-control* user-default subtitle) (not (-> *setting-control* user-default subtitle)))
-                     )
-                 (-> *setting-control* user-default subtitle)
-                 )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                  (if (= arg1 (debug-menu-msg press))
+                      (set! (-> *setting-control* user-default subtitle) (not (-> *setting-control* user-default subtitle)))
+                      )
+                  (-> *setting-control* user-default subtitle)
+                  )
                )
              (flag
                "vibration"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg))
-                 (if (= arg1 (debug-menu-msg press))
-                     (set! (-> *setting-control* user-default vibration) (not (-> *setting-control* user-default vibration)))
-                     )
-                 (the-as uint (-> *setting-control* user-default vibration))
-                 )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                  (if (= arg1 (debug-menu-msg press))
+                      (set! (-> *setting-control* user-default vibration) (not (-> *setting-control* user-default vibration)))
+                      )
+                  (the-as uint (-> *setting-control* user-default vibration))
+                  )
                )
              (menu
                "Stereo Mode"
@@ -3311,37 +3362,37 @@
              (flag
                "camera-stick-dir"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg))
-                 (if (= arg1 (debug-menu-msg press))
-                     (set! (-> *setting-control* user-default unknowng-symbol-00)
-                           (not (-> *setting-control* user-default unknowng-symbol-00))
-                           )
-                     )
-                 (the-as uint (-> *setting-control* user-default unknowng-symbol-00))
-                 )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                  (if (= arg1 (debug-menu-msg press))
+                      (set! (-> *setting-control* user-default unknowng-symbol-00)
+                            (not (-> *setting-control* user-default unknowng-symbol-00))
+                            )
+                      )
+                  (the-as uint (-> *setting-control* user-default unknowng-symbol-00))
+                  )
                )
              (flag
                "progressive-scan"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg))
-                 (if (= arg1 (debug-menu-msg press))
-                     (set! (-> *setting-control* user-default unknown-uint32-00)
-                           (the-as uint (not (-> *setting-control* user-default unknown-uint32-00)))
-                           )
-                     )
-                 (-> *setting-control* user-default unknown-uint32-00)
-                 )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                  (if (= arg1 (debug-menu-msg press))
+                      (set! (-> *setting-control* user-default use-progressive-scan)
+                            (not (-> *setting-control* user-default use-progressive-scan))
+                            )
+                      )
+                  (the-as uint (-> *setting-control* user-default use-progressive-scan))
+                  )
                )
              (flag
                "border-mode"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg))
-                 (when (= arg1 (debug-menu-msg press))
-                   (set! (-> *setting-control* user-default border-mode) (not (-> *setting-control* user-default border-mode)))
-                   (set! (-> *level* play?) (-> *setting-control* user-default border-mode))
-                   )
-                 (-> *setting-control* user-default border-mode)
-                 )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                  (when (= arg1 (debug-menu-msg press))
+                    (set! (-> *setting-control* user-default border-mode) (not (-> *setting-control* user-default border-mode)))
+                    (set! (-> *level* play?) (-> *setting-control* user-default border-mode))
+                    )
+                  (-> *setting-control* user-default border-mode)
+                  )
                )
              )
            (menu
@@ -3401,7 +3452,7 @@
               (s0-0 debug-menu-make-from-template)
               )
           (set! sv-16 arg0)
-          (let ((a1-8 (debug-menu-make-continue-sub-menu (the-as debug-menu-context *game-info*) (the-as symbol a1-7))))
+          (let ((a1-8 (debug-menu-make-continue-sub-menu *game-info* (the-as symbol a1-7))))
             (s2-0 s1-0 (s0-0 sv-16 a1-8))
             )
           )
@@ -3437,42 +3488,42 @@
            (function
              "Print Entity Memory"
              #f
-             (lambda ()
-               (format #t "~%~%========================= Entity Memory =========================~%~%")
-               (let ((gp-0 (-> *level* level0)))
-                 (inspect (-> gp-0 art-group))
-                 (dotimes (s5-0 (-> gp-0 art-group art-group-array length))
-                   (inspect (-> gp-0 art-group art-group-array s5-0))
-                   )
-                 )
-               #f
-               )
+             ,(lambda ()
+                (format #t "~%~%========================= Entity Memory =========================~%~%")
+                (let ((gp-0 (-> *level* level0)))
+                  (inspect (-> gp-0 art-group))
+                  (dotimes (s5-0 (-> gp-0 art-group art-group-array length))
+                    (inspect (-> gp-0 art-group art-group-array s5-0))
+                    )
+                  )
+                #f
+                )
              )
            (function
              "Print Texture Info"
              #f
-             (lambda ()
-               (format #t "~%~%========================= Texture Info =========================~%~%")
-               (inspect *texture-page-dir*)
-               )
+             ,(lambda ()
+                (format #t "~%~%========================= Texture Info =========================~%~%")
+                (inspect *texture-page-dir*)
+                )
              )
            (function
              "Print Texture Verbose"
              #f
-             (lambda ()
-               (format #t "~%~%========================= Texture Info =========================~%~%")
-               (texture-page-dir-inspect *texture-page-dir* #t)
-               (none)
-               )
+             ,(lambda ()
+                (format #t "~%~%========================= Texture Info =========================~%~%")
+                (texture-page-dir-inspect *texture-page-dir* #t)
+                (none)
+                )
              )
            (function
              "Print Merc Stats"
              #f
-             (lambda ()
-               (format #t "~%~%========================== Merc Stats ==========================~%~%")
-               (merc-stats)
-               (none)
-               )
+             ,(lambda ()
+                (format #t "~%~%========================== Merc Stats ==========================~%~%")
+                (merc-stats)
+                (none)
+                )
              )
            )
         )
@@ -3674,38 +3725,38 @@
         '(menu
            "Actor"
            (flag "Spawn Actors" *spawn-actors* dm-boolean-toggle-pick-func)
-           (function "Reset Actors" #f (lambda () (reset-actors 'debug) (none)))
-           (function "Traffic Start" #f (lambda ()
-                                          (let ((gp-0 traffic-start))
-                                            (if (valid? gp-0 function (the-as symbol "") #t 0)
+           (function "Reset Actors" #f ,(lambda () (reset-actors 'debug) (none)))
+           (function "Traffic Start" #f ,(lambda ()
+                                           (let ((gp-0 traffic-start))
+                                             (if (valid? gp-0 function "" #t 0)
+                                                 (gp-0)
+                                                 )
+                                             )
+                                           (none)
+                                           )
+                     )
+           (function "Traffic Kill" #f ,(lambda ()
+                                          (let ((gp-0 traffic-kill))
+                                            (if (valid? gp-0 function "" #t 0)
                                                 (gp-0)
                                                 )
                                             )
                                           (none)
                                           )
                      )
-           (function "Traffic Kill" #f (lambda ()
-                                         (let ((gp-0 traffic-kill))
-                                           (if (valid? gp-0 function (the-as symbol "") #t 0)
-                                               (gp-0)
-                                               )
-                                           )
-                                         (none)
-                                         )
-                     )
            (menu
              "Bot"
              (function
                "Bot Next"
                #f
-               (lambda ()
-                 (send-event (process-by-name "sig-atoll-1" *active-pool*) 'skip)
-                 (send-event (process-by-name "hal-sewer-1" *active-pool*) 'skip)
-                 (send-event (process-by-name "hal-escort-1" *active-pool*) 'skip)
-                 (send-event (process-by-name "squid-2" *active-pool*) 'skip)
-                 (send-event (process-by-name "metalkor-1" *active-pool*) 'skip)
-                 (send-event (process-by-name "sig-under-1" *active-pool*) 'skip)
-                 )
+               ,(lambda ()
+                  (send-event (process-by-name "sig-atoll-1" *active-pool*) 'skip)
+                  (send-event (process-by-name "hal-sewer-1" *active-pool*) 'skip)
+                  (send-event (process-by-name "hal-escort-1" *active-pool*) 'skip)
+                  (send-event (process-by-name "squid-2" *active-pool*) 'skip)
+                  (send-event (process-by-name "metalkor-1" *active-pool*) 'skip)
+                  (send-event (process-by-name "sig-under-1" *active-pool*) 'skip)
+                  )
                )
              (menu
                "Bot Marks"
@@ -3717,20 +3768,20 @@
              (function
                "Record sig5-cent1-path0"
                #f
-               (lambda ()
-                 (set! *bot-record-path* 0)
-                 (dm-play-task-with-continue (game-task under-sig) "cent1-path0-record-path")
-                 (none)
-                 )
+               ,(lambda ()
+                  (set! *bot-record-path* 0)
+                  (dm-play-task-with-continue (game-task under-sig) "cent1-path0-record-path")
+                  (none)
+                  )
                )
              (function
                "Record sig5-cent2-path0"
                #f
-               (lambda ()
-                 (set! *bot-record-path* 1)
-                 (dm-play-task-with-continue (game-task under-sig) "cent2-path0-record-path")
-                 (none)
-                 )
+               ,(lambda ()
+                  (set! *bot-record-path* 1)
+                  (dm-play-task-with-continue (game-task under-sig) "cent2-path0-record-path")
+                  (none)
+                  )
                )
              )
            (menu
@@ -3781,162 +3832,167 @@
            "Target"
            (menu
              "Mode"
-             (function "normal" #f (lambda () (send-event *target* 'end-mode)))
-             (function "racer" #f (lambda ()
+             (function "normal" #f ,(lambda () (send-event *target* 'end-mode)))
+             (function "racer" #f ,(lambda ()
+                                     (if (not *target*)
+                                         (start 'debug (get-current-continue-forced *game-info*))
+                                         )
+                                     (send-event *target* 'change-mode 'racer #f)
+                                     )
+                       )
+             (function "flut" #f ,(lambda ()
                                     (if (not *target*)
-                                        (start 'debug (get-current-continue-point *game-info*))
+                                        (start 'debug (get-current-continue-forced *game-info*))
                                         )
-                                    (send-event *target* 'change-mode 'racer #f)
+                                    (send-event *target* 'change-mode 'flut #f)
                                     )
                        )
-             (function "flut" #f (lambda ()
+             (function "board" #f ,(lambda ()
+                                     (if (not *target*)
+                                         (start 'debug (get-current-continue-forced *game-info*))
+                                         )
+                                     (logior! (-> *game-info* features) (game-feature board))
+                                     (logior! (-> *game-info* debug-features) (game-feature board))
+                                     (send-event *target* 'change-mode 'board #f)
+                                     )
+                       )
+             (function "mech" #f ,(lambda ()
+                                    (if (not *target*)
+                                        (start 'debug (get-current-continue-forced *game-info*))
+                                        )
+                                    (send-event *target* 'change-mode 'mech #f)
+                                    )
+                       )
+             (function "gun" #f ,(lambda ()
                                    (if (not *target*)
-                                       (start 'debug (get-current-continue-point *game-info*))
+                                       (start 'debug (get-current-continue-forced *game-info*))
                                        )
-                                   (send-event *target* 'change-mode 'flut #f)
+                                   (logior! (-> *game-info* features) (game-feature gun))
+                                   (logior! (-> *game-info* debug-features) (game-feature gun))
+                                   (send-event *target* 'change-mode 'gun #f 0)
                                    )
                        )
-             (function "board" #f (lambda ()
-                                    (if (not *target*)
-                                        (start 'debug (get-current-continue-point *game-info*))
-                                        )
-                                    (logior! (-> *game-info* features) (game-feature board))
-                                    (logior! (-> *game-info* debug-features) (game-feature board))
-                                    (send-event *target* 'change-mode 'board #f)
-                                    )
-                       )
-             (function "mech" #f (lambda ()
-                                   (if (not *target*)
-                                       (start 'debug (get-current-continue-point *game-info*))
+             (function "darkjak" #f ,(lambda ()
+                                       (if (not *target*)
+                                           (start 'debug (get-current-continue-forced *game-info*))
+                                           )
+                                       (logior! (-> *game-info* features) (game-feature darkjak))
+                                       (logior! (-> *game-info* debug-features) (game-feature darkjak))
+                                       (send-event *target* 'change-mode 'darkjak #f 3)
                                        )
-                                   (send-event *target* 'change-mode 'mech #f)
-                                   )
                        )
-             (function "gun" #f (lambda ()
-                                  (if (not *target*)
-                                      (start 'debug (get-current-continue-point *game-info*))
-                                      )
-                                  (logior! (-> *game-info* features) (game-feature unk-game-feature-06))
-                                  (logior! (-> *game-info* debug-features) (game-feature unk-game-feature-06))
-                                  (send-event *target* 'change-mode 'gun #f 0)
-                                  )
-                       )
-             (function "darkjak" #f (lambda ()
-                                      (if (not *target*)
-                                          (start 'debug (get-current-continue-point *game-info*))
-                                          )
-                                      (logior! (-> *game-info* features) (game-feature darkjak))
-                                      (logior! (-> *game-info* debug-features) (game-feature darkjak))
-                                      (send-event *target* 'change-mode 'darkjak #f 3)
-                                      )
-                       )
-             (function "indax" #f (lambda ()
-                                    (if (not *target*)
-                                        (start 'debug (get-current-continue-point *game-info*))
-                                        )
-                                    (send-event *target* 'change-mode 'indax #f)
-                                    )
+             (function "indax" #f ,(lambda ()
+                                     (if (not *target*)
+                                         (start 'debug (get-current-continue-forced *game-info*))
+                                         )
+                                     (send-event *target* 'change-mode 'indax #f)
+                                     )
                        )
              )
            (menu
              "Pilot Mode"
-             (function "bikea" #f (lambda () (dm-pilot-mode 0) (none)))
-             (function "bikeb" #f (lambda () (dm-pilot-mode 1) (none)))
-             (function "bikec" #f (lambda () (dm-pilot-mode 2) (none)))
-             (function "crimson-bike" #f (lambda () (dm-pilot-mode 6) (none)))
-             (function "cara" #f (lambda () (dm-pilot-mode 3) (none)))
-             (function "carb" #f (lambda () (dm-pilot-mode 4) (none)))
-             (function "carc" #f (lambda () (dm-pilot-mode 5) (none)))
-             (function "hellcat" #f (lambda () (dm-pilot-mode 7) (none)))
-             (function "race-bike-a" #f (lambda () (dm-pilot-race-mode 0) (none)))
-             (function "race-bike-b" #f (lambda () (dm-pilot-race-mode 1) (none)))
-             (function "race-bike-c" #f (lambda () (dm-pilot-race-mode 2) (none)))
-             (function "evantestbike" #f (lambda () (dm-pilot-mode 8) (none)))
-             (function "test-bike" #f (lambda () (dm-pilot-mode 9) (none)))
-             (function "test-car" #f (lambda () (dm-pilot-mode 10) (none)))
+             (function "bikea" #f ,(lambda () (dm-pilot-mode 0) (none)))
+             (function "bikeb" #f ,(lambda () (dm-pilot-mode 1) (none)))
+             (function "bikec" #f ,(lambda () (dm-pilot-mode 2) (none)))
+             (function "crimson-bike" #f ,(lambda () (dm-pilot-mode 6) (none)))
+             (function "cara" #f ,(lambda () (dm-pilot-mode 3) (none)))
+             (function "carb" #f ,(lambda () (dm-pilot-mode 4) (none)))
+             (function "carc" #f ,(lambda () (dm-pilot-mode 5) (none)))
+             (function "hellcat" #f ,(lambda () (dm-pilot-mode 7) (none)))
+             ;; race-bike-a/b require the city-erol-challenge task to be active
+             (function "race-bike-a" #f ,(lambda () (dm-pilot-race-mode 0) (none)))
+             (function "race-bike-b" #f ,(lambda () (dm-pilot-race-mode 1) (none)))
+             ;; race-bike-c doesn't actually work?
+             (function "race-bike-c" #f ,(lambda () (dm-pilot-race-mode 2) (none))) 
+             ;; race-bike-d/e require one of the stadium race tasks to be active
+             (function "race-bike-d" #f ,(lambda () (dm-pilot-race-mode 3) (none)))
+             (function "race-bike-e" #f ,(lambda () (dm-pilot-race-mode 4) (none)))
+             (function "evantestbike" #f ,(lambda () (dm-pilot-mode 8) (none)))
+             (function "test-bike" #f ,(lambda () (dm-pilot-mode 9) (none)))
+             (function "test-car" #f ,(lambda () (dm-pilot-mode 10) (none)))
              )
-           (flag "Target" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
-                               (when (= arg1 (debug-menu-msg press))
-                                 (if *target*
-                                     (stop 'debug)
-                                     (start 'debug (get-current-continue-point *game-info*))
-                                     )
-                                 )
-                               *target*
-                               )
+           (flag "Target" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                                (when (= arg1 (debug-menu-msg press))
+                                  (if *target*
+                                      (stop 'debug)
+                                      (start 'debug (get-current-continue-forced *game-info*))
+                                      )
+                                  )
+                                *target*
+                                )
                  )
            (menu
              "Darkjak"
              (function
                "get all"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg))
-                 (set! (-> *game-info* features)
-                       (logior (game-feature darkjak darkjak-bomb0 darkjak-bomb1 darkjak-invinc darkjak-giant)
-                               (-> *game-info* features)
-                               )
-                       )
-                 (set! (-> *game-info* debug-features)
-                       (logior (game-feature darkjak darkjak-bomb0 darkjak-bomb1 darkjak-invinc darkjak-giant)
-                               (-> *game-info* debug-features)
-                               )
-                       )
-                 (send-event *target* 'get-pickup 7 #x42c80000)
-                 )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                  (set! (-> *game-info* features)
+                        (logior (game-feature darkjak darkjak-bomb0 darkjak-bomb1 darkjak-invinc darkjak-giant)
+                                (-> *game-info* features)
+                                )
+                        )
+                  (set! (-> *game-info* debug-features)
+                        (logior (game-feature darkjak darkjak-bomb0 darkjak-bomb1 darkjak-invinc darkjak-giant)
+                                (-> *game-info* debug-features)
+                                )
+                        )
+                  (send-event *target* 'get-pickup 7 #x42c80000)
+                  )
                )
-             (function "manual" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
+             (function "manual" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                                      (if (not *target*)
+                                          (start 'debug (get-current-continue-forced *game-info*))
+                                          )
+                                      (logior! (-> *game-info* features) (game-feature darkjak))
+                                      (logior! (-> *game-info* debug-features) (game-feature darkjak))
+                                      (send-event *target* 'change-mode 'darkjak #f 3)
+                                      )
+                       )
+             (function "rapid" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
                                      (if (not *target*)
-                                         (start 'debug (get-current-continue-point *game-info*))
+                                         (start 'debug (get-current-continue-forced *game-info*))
                                          )
                                      (logior! (-> *game-info* features) (game-feature darkjak))
                                      (logior! (-> *game-info* debug-features) (game-feature darkjak))
-                                     (send-event *target* 'change-mode 'darkjak #f 3)
+                                     (send-event *target* 'change-mode 'darkjak #f 2)
                                      )
                        )
-             (function "rapid" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
-                                    (if (not *target*)
-                                        (start 'debug (get-current-continue-point *game-info*))
-                                        )
-                                    (logior! (-> *game-info* features) (game-feature darkjak))
-                                    (logior! (-> *game-info* debug-features) (game-feature darkjak))
-                                    (send-event *target* 'change-mode 'darkjak #f 2)
-                                    )
-                       )
-             (function "bomb0" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
-                                    (if (not *target*)
-                                        (start 'debug (get-current-continue-point *game-info*))
-                                        )
-                                    (send-event *target* 'change-mode 'darkjak #f 7)
-                                    )
-                       )
-             (function "bomb1" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
-                                    (if (not *target*)
-                                        (start 'debug (get-current-continue-point *game-info*))
-                                        )
-                                    (send-event *target* 'change-mode 'darkjak #f 15)
-                                    )
-                       )
-             (function "invinc" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
+             (function "bomb0" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
                                      (if (not *target*)
-                                         (start 'debug (get-current-continue-point *game-info*))
+                                         (start 'debug (get-current-continue-forced *game-info*))
                                          )
-                                     (send-event *target* 'change-mode 'darkjak #f 31)
+                                     (send-event *target* 'change-mode 'darkjak #f 7)
                                      )
                        )
-             (function "giant" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
-                                    (if (not *target*)
-                                        (start 'debug (get-current-continue-point *game-info*))
-                                        )
-                                    (send-event *target* 'change-mode 'darkjak #f 63)
-                                    )
+             (function "bomb1" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                                     (if (not *target*)
+                                         (start 'debug (get-current-continue-forced *game-info*))
+                                         )
+                                     (send-event *target* 'change-mode 'darkjak #f 15)
+                                     )
+                       )
+             (function "invinc" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                                      (if (not *target*)
+                                          (start 'debug (get-current-continue-forced *game-info*))
+                                          )
+                                      (send-event *target* 'change-mode 'darkjak #f 31)
+                                      )
+                       )
+             (function "giant" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                                     (if (not *target*)
+                                         (start 'debug (get-current-continue-forced *game-info*))
+                                         )
+                                     (send-event *target* 'change-mode 'darkjak #f 63)
+                                     )
                        )
              )
            (menu
              "Gun"
-             (flag "yellow" 2 dm-game-inventory-toggle-pick-func)
-             (flag "red" 4 dm-game-inventory-toggle-pick-func)
-             (flag "blue" 8 dm-game-inventory-toggle-pick-func)
-             (flag "dark" 16 dm-game-inventory-toggle-pick-func)
+             (flag "yellow" (the binteger (game-feature gun-yellow)) dm-game-feature-toggle-pick-func)
+             (flag "red" (the binteger (game-feature gun-red)) dm-game-feature-toggle-pick-func)
+             (flag "blue" (the binteger (game-feature gun-blue)) dm-game-feature-toggle-pick-func)
+             (flag "dark" (the binteger (game-feature gun-dark)) dm-game-feature-toggle-pick-func)
              (flag "gun-upgrade-speed" 16384 dm-game-feature-toggle-pick-func)
              (flag "gun-upgrade-ammo" 32768 dm-game-feature-toggle-pick-func)
              (flag "gun-upgrade-damage" 65536 dm-game-feature-toggle-pick-func)
@@ -3945,96 +4001,91 @@
            (flag "Gun Marks" *gun-marks* dm-boolean-toggle-pick-func)
            (flag "Target Stats" *stats-target* dm-boolean-toggle-pick-func)
            (flag "Sidekick Stats" *display-sidekick-stats* dm-boolean-toggle-pick-func)
-           (flag "Invulnerable" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
-                                     (when (= arg1 (debug-menu-msg press))
-                                       (if *target*
-                                           (logxor! (-> *target* state-flags) (state-flags sf2))
-                                           )
-                                       )
-                                     (and *target* (logtest? (-> *target* state-flags) (state-flags sf2)))
-                                     )
+           (flag "Invulnerable" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                                      (when (= arg1 (debug-menu-msg press))
+                                        (if *target*
+                                            (logxor! (-> *target* state-flags) (state-flags sf2))
+                                            )
+                                        )
+                                      (and *target* (logtest? (-> *target* state-flags) (state-flags sf2)))
+                                      )
                  )
            (flag
              "Endless Ammo"
              #f
-             (lambda ((arg0 object) (arg1 debug-menu-msg))
-               (when (= arg1 (debug-menu-msg press))
-                 (if *target*
-                     (set! (-> *target* state-flags) (the-as state-flags (logxor #x10000 (the-as int (-> *target* state-flags)))))
-                     )
-                 )
-               (and *target* (logtest? (state-flags sf16) (-> *target* state-flags)))
-               )
+             ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                (when (= arg1 (debug-menu-msg press))
+                  (if *target*
+                      (set! (-> *target* state-flags) (the-as state-flags (logxor #x10000 (the-as int (-> *target* state-flags)))))
+                      )
+                  )
+                (and *target* (logtest? (state-flags sf16) (-> *target* state-flags)))
+                )
              )
            (function
              "Full Stuff"
              #f
-             (lambda ()
-               (send-event *target* 'get-pickup 18 #x447a0000)
-               (send-event *target* 'get-pickup 17 #x447a0000)
-               (send-event *target* 'get-pickup 13 #x447a0000)
-               (send-event *target* 'get-pickup 14 #x447a0000)
-               (send-event *target* 'get-pickup 15 #x447a0000)
-               (send-event *target* 'get-pickup 16 #x447a0000)
-               (send-event *target* 'get-pickup 7 #x42c80000)
-               (logior!
-                 (-> *game-info* features)
-                 (game-feature unk-game-feature-06 gun-yellow gun-red gun-blue gun-dark board darkjak)
-                 )
-               (let ((v0-7
-                       (logior (-> *game-info* debug-features)
-                               (game-feature unk-game-feature-06 gun-yellow gun-red gun-blue gun-dark board darkjak)
-                               )
-                       )
-                     )
-                 (set! (-> *game-info* debug-features) v0-7)
-                 v0-7
-                 )
-               )
+             ,(lambda ()
+                (send-event *target* 'get-pickup 18 #x447a0000)
+                (send-event *target* 'get-pickup 17 #x447a0000)
+                (send-event *target* 'get-pickup 13 #x447a0000)
+                (send-event *target* 'get-pickup 14 #x447a0000)
+                (send-event *target* 'get-pickup 15 #x447a0000)
+                (send-event *target* 'get-pickup 16 #x447a0000)
+                (send-event *target* 'get-pickup 7 #x42c80000)
+                (logior! (-> *game-info* features) (game-feature gun gun-yellow gun-red gun-blue gun-dark board darkjak))
+                (let ((v0-7
+                        (logior (-> *game-info* debug-features) (game-feature gun gun-yellow gun-red gun-blue gun-dark board darkjak))
+                        )
+                      )
+                  (set! (-> *game-info* debug-features) v0-7)
+                  v0-7
+                  )
+                )
              )
            (function
              "Dump Stuff"
              #f
-             (lambda ()
-               (send-event *target* 'get-pickup 17 -998637568)
-               (send-event *target* 'get-pickup 13 -998637568)
-               (send-event *target* 'get-pickup 14 -998637568)
-               (send-event *target* 'get-pickup 15 -998637568)
-               (send-event *target* 'get-pickup 16 -998637568)
-               )
+             ,(lambda ()
+                (send-event *target* 'get-pickup 17 -998637568)
+                (send-event *target* 'get-pickup 13 -998637568)
+                (send-event *target* 'get-pickup 14 -998637568)
+                (send-event *target* 'get-pickup 15 -998637568)
+                (send-event *target* 'get-pickup 16 -998637568)
+                )
              )
-           (function "Trick Mode" #f (lambda () (send-event *target* 'get-pickup 20 #x468ca000)))
-           (function "Reset Trans" #f (lambda () (when *target*
-                                                   (position-in-front-of-camera! (target-pos 0) 40960.0 4096.0)
+           (function "Trick Mode" #f ,(lambda () (send-event *target* 'get-pickup 20 #x468ca000)))
+           (function "Reset Trans" #f ,(lambda () (when *target*
+                                                    (position-in-front-of-camera! (target-pos 0) 40960.0 4096.0)
+                                                    (set! (-> *target* control transv quad) (the-as uint128 0))
+                                                    (quaternion-identity! (-> *target* control quat))
+                                                    (quaternion-identity! (-> *target* control quat-for-control))
+                                                    (quaternion-identity! (-> *target* control dir-targ))
+                                                    )
+                                               )
+                     )
+           (function "Zero Trans" #f ,(lambda () (when *target*
+                                                   (set-vector! (-> *target* control trans) 0.0 163840.0 0.0 1.0)
                                                    (set! (-> *target* control transv quad) (the-as uint128 0))
                                                    (quaternion-identity! (-> *target* control quat))
-                                                   (quaternion-identity! (-> *target* control unknown-quaternion00))
+                                                   (quaternion-identity! (-> *target* control quat-for-control))
                                                    (quaternion-identity! (-> *target* control dir-targ))
                                                    )
                                               )
                      )
-           (function "Zero Trans" #f (lambda () (when *target*
-                                                  (set-vector! (-> *target* control trans) 0.0 163840.0 0.0 1.0)
-                                                  (set! (-> *target* control transv quad) (the-as uint128 0))
-                                                  (quaternion-identity! (-> *target* control quat))
-                                                  (quaternion-identity! (-> *target* control unknown-quaternion00))
-                                                  (quaternion-identity! (-> *target* control dir-targ))
-                                                  )
-                                             )
-                     )
            (flag "Slow Frame Rate" *slow-frame-rate* dm-boolean-toggle-pick-func)
-           (function "Print Pos" #f (lambda ()
-                                      (let ((v1-0 (target-pos 0)))
-                                        (format #t "~6,,2m ~6,,2m ~6,,2m~%" (-> v1-0 x) (-> v1-0 y) (-> v1-0 z))
-                                        )
-                                      0
-                                      )
+           (function "Print Pos" #f ,(lambda ()
+                                       (let ((v1-0 (target-pos 0)))
+                                         (format #t "~6,,2m ~6,,2m ~6,,2m~%" (-> v1-0 x) (-> v1-0 y) (-> v1-0 z))
+                                         )
+                                       0
+                                       )
                      )
-           (function "Save Continue" #f (lambda () (the-as symbol (if *target*
-                                                                      (trsq->continue-point (-> *target* control))
-                                                                      )
-                                                           )
-                                                )
+           (function "Save Continue" #f ,(lambda () (the-as symbol (if *target*
+                                                                       (trsq->continue-point (-> *target* control))
+                                                                       )
+                                                            )
+                                                 )
                      )
            (flag "RC Board Controls" *target-rc-board-controls* dm-boolean-toggle-pick-func)
            )
@@ -4076,9 +4127,9 @@
            (function
              "Record Selected Path"
              #f
-             (lambda () (set! *race-record-path* #t) (dm-play-race *select-race* #t) (none))
+             ,(lambda () (set! *race-record-path* #t) (dm-play-race *select-race* #t) (none))
              )
-           (function "Play Race" #f (lambda () (set! *race-record-path* #f) (dm-play-race *select-race* #f) (none)))
+           (function "Play Race" #f ,(lambda () (set! *race-record-path* #f) (dm-play-race *select-race* #f) (none)))
            )
         )
       )
@@ -4088,103 +4139,103 @@
         arg0
         '(menu
            "Nav Graph"
-           (function "Start Editor" #f (lambda ()
-                                         (if (not (get-nav-graph-editor))
-                                             (run-nav-graph-editor 'test)
+           (function "Start Editor" #f ,(lambda ()
+                                          (if (not (get-nav-graph-editor))
+                                              (run-nav-graph-editor 'test)
+                                              )
+                                          (none)
+                                          )
+                     )
+           (function "Exit Editor" #f ,(lambda ()
+                                         (if (get-nav-graph-editor)
+                                             (exit-nav-graph-editor)
                                              )
                                          (none)
                                          )
                      )
-           (function "Exit Editor" #f (lambda ()
-                                        (if (get-nav-graph-editor)
-                                            (exit-nav-graph-editor)
-                                            )
-                                        (none)
-                                        )
+           (function "Toggle Plane Mode" #f ,(lambda ()
+                                               (let ((a0-0 (get-nav-graph-editor)))
+                                                 (if a0-0
+                                                     (nav-graph-editor-method-60 a0-0)
+                                                     )
+                                                 )
+                                               (none)
+                                               )
                      )
-           (function "Toggle Plane Mode" #f (lambda ()
-                                              (let ((a0-0 (get-nav-graph-editor)))
-                                                (if a0-0
-                                                    ((method-of-object a0-0 nav-graph-editor-method-60))
-                                                    )
-                                                )
-                                              (none)
-                                              )
-                     )
-           (function "Toggle Hover Mode" #f (lambda ()
-                                              (let ((a0-0 (get-nav-graph-editor)))
-                                                (if a0-0
-                                                    ((method-of-object a0-0 nav-graph-editor-method-61))
-                                                    )
-                                                )
-                                              (none)
-                                              )
+           (function "Toggle Hover Mode" #f ,(lambda ()
+                                               (let ((a0-0 (get-nav-graph-editor)))
+                                                 (if a0-0
+                                                     (nav-graph-editor-method-61 a0-0)
+                                                     )
+                                                 )
+                                               (none)
+                                               )
                      )
            (menu
              "Load"
-             (function "Hover Drillmid" #f (lambda ()
-                                             (let ((a0-0 (get-nav-graph-editor)))
-                                               (if a0-0
-                                                   (nav-graph-editor-method-62 a0-0 'hover 'drillmid)
-                                                   )
-                                               )
-                                             (none)
-                                             )
+             (function "Hover Drillmid" #f ,(lambda ()
+                                              (let ((a0-0 (get-nav-graph-editor)))
+                                                (if a0-0
+                                                    (nav-graph-editor-method-62 a0-0 'hover 'drillmid)
+                                                    )
+                                                )
+                                              (none)
+                                              )
                        )
-             (function "Hover Forresca" #f (lambda ()
-                                             (let ((a0-0 (get-nav-graph-editor)))
-                                               (if a0-0
-                                                   (nav-graph-editor-method-62 a0-0 'hover 'forresca)
-                                                   )
-                                               )
-                                             (none)
-                                             )
+             (function "Hover Forresca" #f ,(lambda ()
+                                              (let ((a0-0 (get-nav-graph-editor)))
+                                                (if a0-0
+                                                    (nav-graph-editor-method-62 a0-0 'hover 'forresca)
+                                                    )
+                                                )
+                                              (none)
+                                              )
                        )
-             (function "Hover Forest" #f (lambda ()
+             (function "Hover Forest" #f ,(lambda ()
+                                            (let ((a0-0 (get-nav-graph-editor)))
+                                              (if a0-0
+                                                  (nav-graph-editor-method-62 a0-0 'hover 'forest)
+                                                  )
+                                              )
+                                            (none)
+                                            )
+                       )
+             (function "Hover Under" #f ,(lambda ()
                                            (let ((a0-0 (get-nav-graph-editor)))
                                              (if a0-0
-                                                 (nav-graph-editor-method-62 a0-0 'hover 'forest)
+                                                 (nav-graph-editor-method-62 a0-0 'hover 'under)
                                                  )
                                              )
                                            (none)
                                            )
                        )
-             (function "Hover Under" #f (lambda ()
-                                          (let ((a0-0 (get-nav-graph-editor)))
-                                            (if a0-0
-                                                (nav-graph-editor-method-62 a0-0 'hover 'under)
-                                                )
-                                            )
-                                          (none)
-                                          )
+             (function "Traffic" #f ,(lambda ()
+                                       (let ((a0-0 (get-nav-graph-editor)))
+                                         (if a0-0
+                                             (nav-graph-editor-method-62 a0-0 'traffic #f)
+                                             )
+                                         )
+                                       (none)
+                                       )
                        )
-             (function "Traffic" #f (lambda ()
-                                      (let ((a0-0 (get-nav-graph-editor)))
-                                        (if a0-0
-                                            (nav-graph-editor-method-62 a0-0 'traffic #f)
-                                            )
-                                        )
-                                      (none)
-                                      )
-                       )
-             (function "Minimap" #f (lambda ()
-                                      (let ((a0-0 (get-nav-graph-editor)))
-                                        (if a0-0
-                                            (nav-graph-editor-method-62 a0-0 'minimap #f)
-                                            )
-                                        )
-                                      (none)
-                                      )
+             (function "Minimap" #f ,(lambda ()
+                                       (let ((a0-0 (get-nav-graph-editor)))
+                                         (if a0-0
+                                             (nav-graph-editor-method-62 a0-0 'minimap #f)
+                                             )
+                                         )
+                                       (none)
+                                       )
                        )
              )
-           (function "Save" #f (lambda ()
-                                 (let ((a0-0 (get-nav-graph-editor)))
-                                   (if a0-0
-                                       ((method-of-object a0-0 nav-graph-editor-method-63))
-                                       )
-                                   )
-                                 (none)
-                                 )
+           (function "Save" #f ,(lambda ()
+                                  (let ((a0-0 (get-nav-graph-editor)))
+                                    (if a0-0
+                                        (nav-graph-editor-method-63 a0-0)
+                                        )
+                                    )
+                                  (none)
+                                  )
                      )
            )
         )
@@ -4195,67 +4246,59 @@
         arg0
         '(menu
            "Map"
-           (flag "Record Mode" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
-                                    (if (= arg1 (debug-menu-msg press))
-                                        (set! (-> *bigmap* recording-flag) (not (-> *bigmap* recording-flag)))
-                                        )
-                                    (-> *bigmap* recording-flag)
-                                    )
+           (flag "Record Mode" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                                     (if (= arg1 (debug-menu-msg press))
+                                         (set! (-> *bigmap* recording-flag) (not (-> *bigmap* recording-flag)))
+                                         )
+                                     (-> *bigmap* recording-flag)
+                                     )
                  )
            (function
              "Clear map"
              #f
-             (lambda ()
-               (let ((v1-1
-                       (process-spawn-function
-                         process
-                         (lambda () (with-pp
-                                      (set-master-mode 'game)
-                                      (let ((gp-0 (-> pp clock frame-counter)))
-                                        (until (>= (- (-> pp clock frame-counter) gp-0) (seconds 0.3))
-                                          (suspend)
-                                          )
-                                        )
-                                      (until #f
-                                        (format *stdcon* "press x clear map, press circle cancel~%")
-                                        (cond
-                                          ((cpad-pressed? 0 x)
-                                           (initialize *bigmap*)
-                                           (return #f)
-                                           )
-                                          ((cpad-pressed? 0 circle)
-                                           (return #f)
-                                           )
-                                          )
-                                        (suspend)
-                                        )
-                                      #f
-                                      )
+             ,(lambda ()
+                (let ((v1-1 (process-spawn-function process (lambda ()
+                                                              (set-master-mode 'game)
+                                                              (let ((gp-0 (current-time)))
+                                                                (until (>= (- (current-time) gp-0) (seconds 0.3))
+                                                                  (suspend)
+                                                                  )
+                                                                )
+                                                              (until #f
+                                                                (format *stdcon* "press x clear map, press circle cancel~%")
+                                                                (cond
+                                                                  ((cpad-pressed? 0 x)
+                                                                   (initialize *bigmap*)
+                                                                   (return #f)
+                                                                   )
+                                                                  ((cpad-pressed? 0 circle)
+                                                                   (return #f)
+                                                                   )
+                                                                  )
+                                                                (suspend)
+                                                                )
+                                                              #f
+                                                              )
+                                                    )
+                            )
+                      )
+                  (when v1-1
+                    (let ((v0-3 (logclear (-> v1-1 0 mask) (process-mask menu))))
+                      (set! (-> v1-1 0 mask) v0-3)
+                      v0-3
+                      )
+                    )
+                  )
+                )
+             )
+           (flag "Fill in" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                                 (if (= arg1 (debug-menu-msg press))
+                                     (set! (-> *bigmap* fill-flag) (not (-> *bigmap* fill-flag)))
+                                     )
+                                 (-> *bigmap* fill-flag)
                                  )
-                         )
-                       )
-                     )
-                 (when v1-1
-                   (let ((v0-3 (logclear (-> v1-1 0 mask) (process-mask menu))))
-                     (set! (-> v1-1 0 mask) v0-3)
-                     v0-3
-                     )
-                   )
                  )
-               )
-             )
-           (flag "Fill in" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
-                                (if (= arg1 (debug-menu-msg press))
-                                    (set! (-> *bigmap* fill-flag) (not (-> *bigmap* fill-flag)))
-                                    )
-                                (-> *bigmap* fill-flag)
-                                )
-                 )
-           (function
-             "Save"
-             #f
-             (lambda ((arg0 object) (arg1 debug-menu-msg)) ((method-of-object *bigmap* bigmap-method-16)) (none))
-             )
+           (function "Save" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg)) (dump-to-file *bigmap*) (none)))
            )
         )
       )
@@ -4319,53 +4362,53 @@
            (flag
              "Overide Enable"
              #f
-             (lambda ((arg0 object) (arg1 debug-menu-msg))
-               (if (= arg1 (debug-menu-msg press))
-                   (set! (-> *time-of-day-context* overide-enable) (not (-> *time-of-day-context* overide-enable)))
-                   )
-               (-> *time-of-day-context* overide-enable)
-               )
+             ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                (if (= arg1 (debug-menu-msg press))
+                    (set! (-> *time-of-day-context* overide-enable) (not (-> *time-of-day-context* overide-enable)))
+                    )
+                (-> *time-of-day-context* overide-enable)
+                )
              )
            (menu
              "Weather"
              (flag
                "Overide Weather Enable"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg))
-                 (if (= arg1 (debug-menu-msg press))
-                     (set! (-> *mood-control* overide-weather-flag) (not (-> *mood-control* overide-weather-flag)))
-                     )
-                 (-> *mood-control* overide-weather-flag)
-                 )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                  (if (= arg1 (debug-menu-msg press))
+                      (set! (-> *mood-control* overide-weather-flag) (not (-> *mood-control* overide-weather-flag)))
+                      )
+                  (-> *mood-control* overide-weather-flag)
+                  )
                )
              (flag
                "Display Values"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg))
-                 (if (= arg1 (debug-menu-msg press))
-                     (set! (-> *mood-control* display-flag) (not (-> *mood-control* display-flag)))
-                     )
-                 (-> *mood-control* display-flag)
-                 )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                  (if (= arg1 (debug-menu-msg press))
+                      (set! (-> *mood-control* display-flag) (not (-> *mood-control* display-flag)))
+                      )
+                  (-> *mood-control* display-flag)
+                  )
                )
              (float-var
                "Clouds"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *mood-control* (nonzero? *mood-control*))
-                        (set! (-> *mood-control* overide cloud) arg2)
-                        )
-                    )
-                   ((or (not *mood-control*) (zero? *mood-control*))
-                    0.0
-                    )
-                   (else
-                     (-> *mood-control* overide cloud)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *mood-control* (nonzero? *mood-control*))
+                         (set! (-> *mood-control* overide cloud) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *mood-control*) (zero? *mood-control*))
+                     0.0
+                     )
+                    (else
+                      (-> *mood-control* overide cloud)
+                      )
+                    )
+                  )
                1
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -4376,21 +4419,21 @@
              (float-var
                "Fog"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *mood-control* (nonzero? *mood-control*))
-                        (set! (-> *mood-control* overide fog) arg2)
-                        )
-                    )
-                   ((or (not *mood-control*) (zero? *mood-control*))
-                    0.0
-                    )
-                   (else
-                     (-> *mood-control* overide fog)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *mood-control* (nonzero? *mood-control*))
+                         (set! (-> *mood-control* overide fog) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *mood-control*) (zero? *mood-control*))
+                     0.0
+                     )
+                    (else
+                      (-> *mood-control* overide fog)
+                      )
+                    )
+                  )
                1
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -4413,33 +4456,33 @@
              (float-var
                "Ambient Red"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
-                        (set! (-> *overide-mood-color-table*
-                                  data
-                                  (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                                  amb-color
-                                  x
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-color-table*
-                         data
-                         (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                         amb-color
-                         x
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
+                         (set! (-> *overide-mood-color-table*
+                                   data
+                                   (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                                   amb-color
+                                   x
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-color-table*
+                          data
+                          (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                          amb-color
+                          x
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -4450,33 +4493,33 @@
              (float-var
                "Ambient Green"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
-                        (set! (-> *overide-mood-color-table*
-                                  data
-                                  (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                                  amb-color
-                                  y
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-color-table*
-                         data
-                         (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                         amb-color
-                         y
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
+                         (set! (-> *overide-mood-color-table*
+                                   data
+                                   (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                                   amb-color
+                                   y
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-color-table*
+                          data
+                          (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                          amb-color
+                          y
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -4487,33 +4530,33 @@
              (float-var
                "Ambient Blue"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
-                        (set! (-> *overide-mood-color-table*
-                                  data
-                                  (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                                  amb-color
-                                  z
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-color-table*
-                         data
-                         (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                         amb-color
-                         z
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
+                         (set! (-> *overide-mood-color-table*
+                                   data
+                                   (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                                   amb-color
+                                   z
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-color-table*
+                          data
+                          (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                          amb-color
+                          z
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -4524,33 +4567,33 @@
              (float-var
                "Ambient Mult"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
-                        (set! (-> *overide-mood-color-table*
-                                  data
-                                  (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                                  amb-color
-                                  w
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-color-table*
-                         data
-                         (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                         amb-color
-                         w
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
+                         (set! (-> *overide-mood-color-table*
+                                   data
+                                   (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                                   amb-color
+                                   w
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-color-table*
+                          data
+                          (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                          amb-color
+                          w
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -4561,33 +4604,33 @@
              (float-var
                "Light Red"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
-                        (set! (-> *overide-mood-color-table*
-                                  data
-                                  (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                                  lgt-color
-                                  x
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-color-table*
-                         data
-                         (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                         lgt-color
-                         x
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
+                         (set! (-> *overide-mood-color-table*
+                                   data
+                                   (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                                   lgt-color
+                                   x
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-color-table*
+                          data
+                          (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                          lgt-color
+                          x
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -4598,33 +4641,33 @@
              (float-var
                "Light Green"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
-                        (set! (-> *overide-mood-color-table*
-                                  data
-                                  (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                                  lgt-color
-                                  y
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-color-table*
-                         data
-                         (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                         lgt-color
-                         y
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
+                         (set! (-> *overide-mood-color-table*
+                                   data
+                                   (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                                   lgt-color
+                                   y
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-color-table*
+                          data
+                          (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                          lgt-color
+                          y
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -4635,33 +4678,33 @@
              (float-var
                "Light Blue"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
-                        (set! (-> *overide-mood-color-table*
-                                  data
-                                  (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                                  lgt-color
-                                  z
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-color-table*
-                         data
-                         (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                         lgt-color
-                         z
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
+                         (set! (-> *overide-mood-color-table*
+                                   data
+                                   (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                                   lgt-color
+                                   z
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-color-table*
+                          data
+                          (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                          lgt-color
+                          z
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -4672,33 +4715,33 @@
              (float-var
                "Light Mult"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
-                        (set! (-> *overide-mood-color-table*
-                                  data
-                                  (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                                  lgt-color
-                                  w
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-color-table*
-                         data
-                         (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                         lgt-color
-                         w
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-color-table* (nonzero? *overide-mood-color-table*))
+                         (set! (-> *overide-mood-color-table*
+                                   data
+                                   (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                                   lgt-color
+                                   w
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-color-table*) (zero? *overide-mood-color-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-color-table*
+                          data
+                          (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                          lgt-color
+                          w
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -4709,58 +4752,58 @@
              (function
                "reset selected time"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (mem-copy!
-                   (the-as
-                     pointer
-                     (-> *overide-mood-color-table*
-                         data
-                         (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                         )
-                     )
-                   (the-as
-                     pointer
-                     (-> *mood-control*
-                         mood-color-table
-                         data
-                         (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                         )
-                     )
-                   32
-                   )
-                 (set! (-> *overide-mood-color-table*
-                           data
-                           (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                           lgt-color
-                           w
-                           )
-                       1.0
-                       )
-                 (set! (-> *overide-mood-color-table*
-                           data
-                           (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
-                           amb-color
-                           w
-                           )
-                       1.0
-                       )
-                 )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (mem-copy!
+                    (the-as
+                      pointer
+                      (-> *overide-mood-color-table*
+                          data
+                          (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                          )
+                      )
+                    (the-as
+                      pointer
+                      (-> *mood-control*
+                          mood-color-table
+                          data
+                          (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                          )
+                      )
+                    32
+                    )
+                  (set! (-> *overide-mood-color-table*
+                            data
+                            (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                            lgt-color
+                            w
+                            )
+                        1.0
+                        )
+                  (set! (-> *overide-mood-color-table*
+                            data
+                            (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2))
+                            amb-color
+                            w
+                            )
+                        1.0
+                        )
+                  )
                )
              (function
                "reset all times"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (mem-copy!
-                   (the-as pointer *overide-mood-color-table*)
-                   (the-as pointer (-> *mood-control* mood-color-table))
-                   256
-                   )
-                 (dotimes (v1-1 8)
-                   (set! (-> *overide-mood-color-table* data v1-1 lgt-color w) 1.0)
-                   (set! (-> *overide-mood-color-table* data v1-1 amb-color w) 1.0)
-                   )
-                 (the-as float #f)
-                 )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (mem-copy!
+                    (the-as pointer *overide-mood-color-table*)
+                    (the-as pointer (-> *mood-control* mood-color-table))
+                    256
+                    )
+                  (dotimes (v1-1 8)
+                    (set! (-> *overide-mood-color-table* data v1-1 lgt-color w) 1.0)
+                    (set! (-> *overide-mood-color-table* data v1-1 amb-color w) 1.0)
+                    )
+                  (the-as float #f)
+                  )
                )
              )
            (menu
@@ -4777,33 +4820,33 @@
              (float-var
                "Red"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
-                        (set! (-> *overide-mood-fog-table*
-                                  data
-                                  (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                                  fog-color
-                                  x
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-fog-table*
-                         data
-                         (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                         fog-color
-                         x
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
+                         (set! (-> *overide-mood-fog-table*
+                                   data
+                                   (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                                   fog-color
+                                   x
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-fog-table*
+                          data
+                          (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                          fog-color
+                          x
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 1.0)
                #t
@@ -4814,33 +4857,33 @@
              (float-var
                "Green"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
-                        (set! (-> *overide-mood-fog-table*
-                                  data
-                                  (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                                  fog-color
-                                  y
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-fog-table*
-                         data
-                         (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                         fog-color
-                         y
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
+                         (set! (-> *overide-mood-fog-table*
+                                   data
+                                   (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                                   fog-color
+                                   y
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-fog-table*
+                          data
+                          (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                          fog-color
+                          y
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 1.0)
                #t
@@ -4851,33 +4894,33 @@
              (float-var
                "Blue"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
-                        (set! (-> *overide-mood-fog-table*
-                                  data
-                                  (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                                  fog-color
-                                  z
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-fog-table*
-                         data
-                         (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                         fog-color
-                         z
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
+                         (set! (-> *overide-mood-fog-table*
+                                   data
+                                   (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                                   fog-color
+                                   z
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-fog-table*
+                          data
+                          (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                          fog-color
+                          z
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 1.0)
                #t
@@ -4888,33 +4931,33 @@
              (float-var
                "Mult"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
-                        (set! (-> *overide-mood-fog-table*
-                                  data
-                                  (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                                  fog-color
-                                  w
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-fog-table*
-                         data
-                         (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                         fog-color
-                         w
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
+                         (set! (-> *overide-mood-fog-table*
+                                   data
+                                   (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                                   fog-color
+                                   w
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-fog-table*
+                          data
+                          (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                          fog-color
+                          w
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -4925,33 +4968,33 @@
              (float-var
                "Start"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
-                        (set! (-> *overide-mood-fog-table*
-                                  data
-                                  (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                                  fog-dists
-                                  x
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-fog-table*
-                         data
-                         (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                         fog-dists
-                         x
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
+                         (set! (-> *overide-mood-fog-table*
+                                   data
+                                   (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                                   fog-dists
+                                   x
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-fog-table*
+                          data
+                          (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                          fog-dists
+                          x
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 1.0)
                #t
@@ -4962,33 +5005,33 @@
              (float-var
                "End"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
-                        (set! (-> *overide-mood-fog-table*
-                                  data
-                                  (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                                  fog-dists
-                                  y
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-fog-table*
-                         data
-                         (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                         fog-dists
-                         y
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
+                         (set! (-> *overide-mood-fog-table*
+                                   data
+                                   (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                                   fog-dists
+                                   y
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-fog-table*
+                          data
+                          (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                          fog-dists
+                          y
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 1.0)
                #t
@@ -4999,33 +5042,33 @@
              (float-var
                "Max"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
-                        (set! (-> *overide-mood-fog-table*
-                                  data
-                                  (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                                  fog-dists
-                                  w
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-fog-table*
-                         data
-                         (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                         fog-dists
-                         w
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
+                         (set! (-> *overide-mood-fog-table*
+                                   data
+                                   (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                                   fog-dists
+                                   w
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-fog-table*
+                          data
+                          (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                          fog-dists
+                          w
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.5)
                #t
@@ -5036,33 +5079,33 @@
              (float-var
                "Min"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
-                        (set! (-> *overide-mood-fog-table*
-                                  data
-                                  (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                                  fog-dists
-                                  z
-                                  )
-                              arg2
-                              )
-                        )
-                    )
-                   ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
-                    0.0
-                    )
-                   (else
-                     (-> *overide-mood-fog-table*
-                         data
-                         (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                         fog-dists
-                         z
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *overide-mood-fog-table* (nonzero? *overide-mood-fog-table*))
+                         (set! (-> *overide-mood-fog-table*
+                                   data
+                                   (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                                   fog-dists
+                                   z
+                                   )
+                               arg2
+                               )
                          )
                      )
-                   )
-                 )
+                    ((or (not *overide-mood-fog-table*) (zero? *overide-mood-fog-table*))
+                     0.0
+                     )
+                    (else
+                      (-> *overide-mood-fog-table*
+                          data
+                          (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                          fog-dists
+                          z
+                          )
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.5)
                #t
@@ -5073,81 +5116,81 @@
              (function
                "reset selected time"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (mem-copy!
-                   (the-as
-                     pointer
-                     (-> *overide-mood-fog-table*
-                         data
-                         (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                         )
-                     )
-                   (the-as
-                     pointer
-                     (-> *mood-control*
-                         mood-fog-table
-                         data
-                         (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                         )
-                     )
-                   48
-                   )
-                 (set! (-> *overide-mood-fog-table*
-                           data
-                           (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                           fog-color
-                           w
-                           )
-                       1.0
-                       )
-                 (set! (-> *overide-mood-fog-table*
-                           data
-                           (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                           fog-dists
-                           x
-                           )
-                       (* 0.00024414062
-                          (-> *overide-mood-fog-table*
-                              data
-                              (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                              fog-dists
-                              x
-                              )
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (mem-copy!
+                    (the-as
+                      pointer
+                      (-> *overide-mood-fog-table*
+                          data
+                          (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
                           )
-                       )
-                 (set! (-> *overide-mood-fog-table*
-                           data
-                           (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                           fog-dists
-                           y
-                           )
-                       (* 0.00024414062
-                          (-> *overide-mood-fog-table*
-                              data
-                              (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
-                              fog-dists
-                              y
-                              )
+                      )
+                    (the-as
+                      pointer
+                      (-> *mood-control*
+                          mood-fog-table
+                          data
+                          (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
                           )
-                       )
-                 )
+                      )
+                    48
+                    )
+                  (set! (-> *overide-mood-fog-table*
+                            data
+                            (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                            fog-color
+                            w
+                            )
+                        1.0
+                        )
+                  (set! (-> *overide-mood-fog-table*
+                            data
+                            (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                            fog-dists
+                            x
+                            )
+                        (* 0.00024414062
+                           (-> *overide-mood-fog-table*
+                               data
+                               (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                               fog-dists
+                               x
+                               )
+                           )
+                        )
+                  (set! (-> *overide-mood-fog-table*
+                            data
+                            (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                            fog-dists
+                            y
+                            )
+                        (* 0.00024414062
+                           (-> *overide-mood-fog-table*
+                               data
+                               (the-as uint (logand (-> *time-of-day-context* mode) (time-of-day-palette-id unk0 unk1 unk2)))
+                               fog-dists
+                               y
+                               )
+                           )
+                        )
+                  )
                )
              (function
                "reset all times"
                #f
-               (lambda ()
-                 (mem-copy! (the-as pointer *overide-mood-fog-table*) (the-as pointer (-> *mood-control* mood-fog-table)) 384)
-                 (dotimes (v1-1 8)
-                   (set! (-> *overide-mood-fog-table* data v1-1 fog-color w) 1.0)
-                   (set! (-> *overide-mood-fog-table* data v1-1 fog-dists x)
-                         (* 0.00024414062 (-> *overide-mood-fog-table* data v1-1 fog-dists x))
-                         )
-                   (set! (-> *overide-mood-fog-table* data v1-1 fog-dists y)
-                         (* 0.00024414062 (-> *overide-mood-fog-table* data v1-1 fog-dists y))
-                         )
-                   )
-                 #f
-                 )
+               ,(lambda ()
+                  (mem-copy! (the-as pointer *overide-mood-fog-table*) (the-as pointer (-> *mood-control* mood-fog-table)) 384)
+                  (dotimes (v1-1 8)
+                    (set! (-> *overide-mood-fog-table* data v1-1 fog-color w) 1.0)
+                    (set! (-> *overide-mood-fog-table* data v1-1 fog-dists x)
+                          (* 0.00024414062 (-> *overide-mood-fog-table* data v1-1 fog-dists x))
+                          )
+                    (set! (-> *overide-mood-fog-table* data v1-1 fog-dists y)
+                          (* 0.00024414062 (-> *overide-mood-fog-table* data v1-1 fog-dists y))
+                          )
+                    )
+                  #f
+                  )
                )
              )
            (menu
@@ -5164,21 +5207,21 @@
              (float-var
                "Red"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
-                        (set! (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) x) arg2)
-                        )
-                    )
-                   ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
-                    0.0
-                    )
-                   (else
-                     (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) x)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
+                         (set! (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) x) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
+                     0.0
+                     )
+                    (else
+                      (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) x)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -5189,21 +5232,21 @@
              (float-var
                "Green"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
-                        (set! (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) y) arg2)
-                        )
-                    )
-                   ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
-                    0.0
-                    )
-                   (else
-                     (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) y)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
+                         (set! (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) y) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
+                     0.0
+                     )
+                    (else
+                      (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) y)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -5214,21 +5257,21 @@
              (float-var
                "Blue"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
-                        (set! (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) z) arg2)
-                        )
-                    )
-                   ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
-                    0.0
-                    )
-                   (else
-                     (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) z)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
+                         (set! (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) z) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
+                     0.0
+                     )
+                    (else
+                      (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) z)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -5239,21 +5282,21 @@
              (float-var
                "Mult"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
-                        (set! (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) w) arg2)
-                        )
-                    )
-                   ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
-                    0.0
-                    )
-                   (else
-                     (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) w)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
+                         (set! (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) w) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
+                     0.0
+                     )
+                    (else
+                      (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette) w)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -5264,21 +5307,21 @@
              (function
                "reset selected time"
                #f
-               (lambda () (let ((v0-0 (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette))))
-                            (set! (-> v0-0 x) 1.0)
-                            (set! (-> v0-0 y) 1.0)
-                            (set! (-> v0-0 z) 1.0)
-                            (set! (-> v0-0 w) 1.0)
-                            v0-0
-                            )
-                       )
+               ,(lambda () (let ((v0-0 (-> *time-of-day-context* times (-> *time-of-day-context* overide-palette))))
+                             (set! (-> v0-0 x) 1.0)
+                             (set! (-> v0-0 y) 1.0)
+                             (set! (-> v0-0 z) 1.0)
+                             (set! (-> v0-0 w) 1.0)
+                             v0-0
+                             )
+                        )
                )
-             (function "reset all times" #f (lambda ()
-                                              (dotimes (v1-0 8)
-                                                (set-vector! (-> *time-of-day-context* times v1-0) 1.0 1.0 1.0 1.0)
-                                                )
-                                              #f
-                                              )
+             (function "reset all times" #f ,(lambda ()
+                                               (dotimes (v1-0 8)
+                                                 (set-vector! (-> *time-of-day-context* times v1-0) 1.0 1.0 1.0 1.0)
+                                                 )
+                                               #f
+                                               )
                        )
              )
            (menu
@@ -5286,21 +5329,21 @@
              (float-var
                "Red"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
-                        (set! (-> *time-of-day-context* filter-color x) arg2)
-                        )
-                    )
-                   ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
-                    0.0
-                    )
-                   (else
-                     (-> *time-of-day-context* filter-color x)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
+                         (set! (-> *time-of-day-context* filter-color x) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
+                     0.0
+                     )
+                    (else
+                      (-> *time-of-day-context* filter-color x)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -5311,21 +5354,21 @@
              (float-var
                "Green"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
-                        (set! (-> *time-of-day-context* filter-color y) arg2)
-                        )
-                    )
-                   ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
-                    0.0
-                    )
-                   (else
-                     (-> *time-of-day-context* filter-color y)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
+                         (set! (-> *time-of-day-context* filter-color y) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
+                     0.0
+                     )
+                    (else
+                      (-> *time-of-day-context* filter-color y)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -5336,21 +5379,21 @@
              (float-var
                "Blue"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
-                        (set! (-> *time-of-day-context* filter-color z) arg2)
-                        )
-                    )
-                   ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
-                    0.0
-                    )
-                   (else
-                     (-> *time-of-day-context* filter-color z)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
+                         (set! (-> *time-of-day-context* filter-color z) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
+                     0.0
+                     )
+                    (else
+                      (-> *time-of-day-context* filter-color z)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -5361,21 +5404,21 @@
              (float-var
                "Mult"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
-                        (set! (-> *time-of-day-context* filter-color w) arg2)
-                        )
-                    )
-                   ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
-                    0.0
-                    )
-                   (else
-                     (-> *time-of-day-context* filter-color w)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
+                         (set! (-> *time-of-day-context* filter-color w) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
+                     0.0
+                     )
+                    (else
+                      (-> *time-of-day-context* filter-color w)
+                      )
+                    )
+                  )
                2
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -5383,14 +5426,14 @@
                2
                0
                )
-             (function "reset filter" #f (lambda () (let ((v0-0 (-> *time-of-day-context* filter-color)))
-                                                      (set! (-> v0-0 x) 1.0)
-                                                      (set! (-> v0-0 y) 1.0)
-                                                      (set! (-> v0-0 z) 1.0)
-                                                      (set! (-> v0-0 w) 1.0)
-                                                      (the-as symbol v0-0)
-                                                      )
-                                                 )
+             (function "reset filter" #f ,(lambda () (let ((v0-0 (-> *time-of-day-context* filter-color)))
+                                                       (set! (-> v0-0 x) 1.0)
+                                                       (set! (-> v0-0 y) 1.0)
+                                                       (set! (-> v0-0 z) 1.0)
+                                                       (set! (-> v0-0 w) 1.0)
+                                                       (the-as symbol v0-0)
+                                                       )
+                                                  )
                        )
              )
            (menu
@@ -5398,21 +5441,21 @@
              (float-var
                "Cloud Min"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
-                        (set! (-> *time-of-day-context* current-clouds cloud-min) arg2)
-                        )
-                    )
-                   ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
-                    0.0
-                    )
-                   (else
-                     (-> *time-of-day-context* current-clouds cloud-min)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
+                         (set! (-> *time-of-day-context* current-clouds cloud-min) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
+                     0.0
+                     )
+                    (else
+                      (-> *time-of-day-context* current-clouds cloud-min)
+                      )
+                    )
+                  )
                1
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -5423,21 +5466,21 @@
              (float-var
                "Cloud Max"
                #f
-               (lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
-                 (cond
-                   ((= arg1 (debug-menu-msg press))
-                    (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
-                        (set! (-> *time-of-day-context* current-clouds cloud-max) arg2)
-                        )
-                    )
-                   ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
-                    0.0
-                    )
-                   (else
-                     (-> *time-of-day-context* current-clouds cloud-max)
+               ,(lambda ((arg0 object) (arg1 debug-menu-msg) (arg2 float))
+                  (cond
+                    ((= arg1 (debug-menu-msg press))
+                     (if (and *time-of-day-context* (nonzero? *time-of-day-context*))
+                         (set! (-> *time-of-day-context* current-clouds cloud-max) arg2)
+                         )
                      )
-                   )
-                 )
+                    ((or (not *time-of-day-context*) (zero? *time-of-day-context*))
+                     0.0
+                     )
+                    (else
+                      (-> *time-of-day-context* current-clouds cloud-max)
+                      )
+                    )
+                  )
                1
                (new 'static 'bfloat :data 0.00390625)
                #t
@@ -5448,39 +5491,39 @@
              (function
                "reset sky"
                #f
-               (lambda ()
-                 (set! (-> *time-of-day-context* current-clouds cloud-min) (-> *mood-control* mood-clouds cloud-min))
-                 (set! (-> *time-of-day-context* current-clouds cloud-max) (-> *mood-control* mood-clouds cloud-max))
-                 )
+               ,(lambda ()
+                  (set! (-> *time-of-day-context* current-clouds cloud-min) (-> *mood-control* mood-clouds cloud-min))
+                  (set! (-> *time-of-day-context* current-clouds cloud-max) (-> *mood-control* mood-clouds cloud-max))
+                  )
                )
              )
-           (function "Print mood tables" #f (lambda () (print-mood-tables) (none)))
+           (function "Print mood tables" #f ,(lambda () (print-mood-tables) (none)))
            (function
              "reset everything"
              #f
-             (lambda ()
-               (mem-copy!
-                 (the-as pointer *overide-mood-color-table*)
-                 (the-as pointer (-> *mood-control* mood-color-table))
-                 256
-                 )
-               (mem-copy! (the-as pointer *overide-mood-fog-table*) (the-as pointer (-> *mood-control* mood-fog-table)) 384)
-               (dotimes (v1-2 8)
-                 (set! (-> *overide-mood-color-table* data v1-2 lgt-color w) 1.0)
-                 (set! (-> *overide-mood-color-table* data v1-2 amb-color w) 1.0)
-                 (set! (-> *overide-mood-fog-table* data v1-2 fog-color w) 1.0)
-                 (set! (-> *overide-mood-fog-table* data v1-2 fog-dists x)
-                       (* 0.00024414062 (-> *overide-mood-fog-table* data v1-2 fog-dists x))
-                       )
-                 (set! (-> *overide-mood-fog-table* data v1-2 fog-dists y)
-                       (* 0.00024414062 (-> *overide-mood-fog-table* data v1-2 fog-dists y))
-                       )
-                 (set-vector! (-> *time-of-day-context* times v1-2) 1.0 1.0 1.0 1.0)
-                 )
-               (set-vector! (-> *time-of-day-context* filter-color) 1.0 1.0 1.0 1.0)
-               (set! (-> *time-of-day-context* current-clouds cloud-min) (-> *mood-control* mood-clouds cloud-min))
-               (set! (-> *time-of-day-context* current-clouds cloud-max) (-> *mood-control* mood-clouds cloud-max))
-               )
+             ,(lambda ()
+                (mem-copy!
+                  (the-as pointer *overide-mood-color-table*)
+                  (the-as pointer (-> *mood-control* mood-color-table))
+                  256
+                  )
+                (mem-copy! (the-as pointer *overide-mood-fog-table*) (the-as pointer (-> *mood-control* mood-fog-table)) 384)
+                (dotimes (v1-2 8)
+                  (set! (-> *overide-mood-color-table* data v1-2 lgt-color w) 1.0)
+                  (set! (-> *overide-mood-color-table* data v1-2 amb-color w) 1.0)
+                  (set! (-> *overide-mood-fog-table* data v1-2 fog-color w) 1.0)
+                  (set! (-> *overide-mood-fog-table* data v1-2 fog-dists x)
+                        (* 0.00024414062 (-> *overide-mood-fog-table* data v1-2 fog-dists x))
+                        )
+                  (set! (-> *overide-mood-fog-table* data v1-2 fog-dists y)
+                        (* 0.00024414062 (-> *overide-mood-fog-table* data v1-2 fog-dists y))
+                        )
+                  (set-vector! (-> *time-of-day-context* times v1-2) 1.0 1.0 1.0 1.0)
+                  )
+                (set-vector! (-> *time-of-day-context* filter-color) 1.0 1.0 1.0 1.0)
+                (set! (-> *time-of-day-context* current-clouds cloud-min) (-> *mood-control* mood-clouds cloud-min))
+                (set! (-> *time-of-day-context* current-clouds cloud-max) (-> *mood-control* mood-clouds cloud-max))
+                )
              )
            )
         )
@@ -5496,8 +5539,8 @@
            (flag "Region Marks" *display-region-marks* dm-boolean-toggle-pick-func)
            (flag "Sound channels" *display-iop-info* dm-boolean-toggle-pick-func)
            (function "Reload Banks" #f sound-bank-reload)
-           (function "List Sounds" #f (lambda () (list-sounds) (none)))
-           (function "IOP Info" #f (lambda () (loader-test-command (sound-command iop-mem) (the-as uint 0)) (none)))
+           (function "List Sounds" #f ,(lambda () (list-sounds) (none)))
+           ;(function "IOP Info" #f ,(lambda () (loader-test-command (sound-command iop-mem) (the-as uint 0)) (none)))
            )
         )
       )
@@ -5872,7 +5915,7 @@
         )
       )
     (debug-menu-append-item s5-0 (debug-menu-make-task-menu arg0))
-    (debug-menu-append-item s5-0 (the-as debug-menu-node (debug-menu-make-play-menu (the-as symbol arg0))))
+    (debug-menu-append-item s5-0 (debug-menu-make-play-menu arg0))
     )
   arg0
   )
@@ -5885,112 +5928,112 @@
     '(main-menu
        "Popup"
        (flag "Cam 1" pad-1 dm-cam-externalize)
-       (flag "Target" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
-                           (when (= arg1 (debug-menu-msg press))
-                             (if *target*
-                                 (stop 'debug)
-                                 (start 'debug (get-current-continue-point *game-info*))
-                                 )
-                             )
-                           *target*
-                           )
+       (flag "Target" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                            (when (= arg1 (debug-menu-msg press))
+                              (if *target*
+                                  (stop 'debug)
+                                  (start 'debug (get-current-continue-forced *game-info*))
+                                  )
+                              )
+                            *target*
+                            )
              )
        (menu
          "Mode"
-         (function "normal" #f (lambda () (send-event *target* 'end-mode)))
-         (function "racer" #f (lambda ()
+         (function "normal" #f ,(lambda () (send-event *target* 'end-mode)))
+         (function "racer" #f ,(lambda ()
+                                 (if (not *target*)
+                                     (start 'debug (get-current-continue-forced *game-info*))
+                                     )
+                                 (send-event *target* 'change-mode 'racer #f)
+                                 )
+                   )
+         (function "flut" #f ,(lambda ()
                                 (if (not *target*)
-                                    (start 'debug (get-current-continue-point *game-info*))
+                                    (start 'debug (get-current-continue-forced *game-info*))
                                     )
-                                (send-event *target* 'change-mode 'racer #f)
+                                (send-event *target* 'change-mode 'flut #f)
                                 )
                    )
-         (function "flut" #f (lambda ()
+         (function "board" #f ,(lambda ()
+                                 (if (not *target*)
+                                     (start 'debug (get-current-continue-forced *game-info*))
+                                     )
+                                 (logior! (-> *game-info* features) (game-feature board))
+                                 (logior! (-> *game-info* debug-features) (game-feature board))
+                                 (send-event *target* 'change-mode 'board #f)
+                                 )
+                   )
+         (function "mech" #f ,(lambda ()
+                                (if (not *target*)
+                                    (start 'debug (get-current-continue-forced *game-info*))
+                                    )
+                                (send-event *target* 'change-mode 'mech #f)
+                                )
+                   )
+         (function "gun" #f ,(lambda ()
                                (if (not *target*)
-                                   (start 'debug (get-current-continue-point *game-info*))
+                                   (start 'debug (get-current-continue-forced *game-info*))
                                    )
-                               (send-event *target* 'change-mode 'flut #f)
+                               (logior! (-> *game-info* features) (game-feature gun))
+                               (logior! (-> *game-info* debug-features) (game-feature gun))
+                               (send-event *target* 'change-mode 'gun #f 0)
                                )
                    )
-         (function "board" #f (lambda ()
-                                (if (not *target*)
-                                    (start 'debug (get-current-continue-point *game-info*))
-                                    )
-                                (logior! (-> *game-info* features) (game-feature board))
-                                (logior! (-> *game-info* debug-features) (game-feature board))
-                                (send-event *target* 'change-mode 'board #f)
-                                )
-                   )
-         (function "mech" #f (lambda ()
-                               (if (not *target*)
-                                   (start 'debug (get-current-continue-point *game-info*))
+         (function "darkjak" #f ,(lambda ()
+                                   (if (not *target*)
+                                       (start 'debug (get-current-continue-forced *game-info*))
+                                       )
+                                   (logior! (-> *game-info* features) (game-feature darkjak))
+                                   (logior! (-> *game-info* debug-features) (game-feature darkjak))
+                                   (send-event *target* 'change-mode 'darkjak #f 3)
                                    )
-                               (send-event *target* 'change-mode 'mech #f)
-                               )
                    )
-         (function "gun" #f (lambda ()
-                              (if (not *target*)
-                                  (start 'debug (get-current-continue-point *game-info*))
-                                  )
-                              (logior! (-> *game-info* features) (game-feature unk-game-feature-06))
-                              (logior! (-> *game-info* debug-features) (game-feature unk-game-feature-06))
-                              (send-event *target* 'change-mode 'gun #f 0)
-                              )
-                   )
-         (function "darkjak" #f (lambda ()
-                                  (if (not *target*)
-                                      (start 'debug (get-current-continue-point *game-info*))
-                                      )
-                                  (logior! (-> *game-info* features) (game-feature darkjak))
-                                  (logior! (-> *game-info* debug-features) (game-feature darkjak))
-                                  (send-event *target* 'change-mode 'darkjak #f 3)
-                                  )
-                   )
-         (function "indax" #f (lambda ()
-                                (if (not *target*)
-                                    (start 'debug (get-current-continue-point *game-info*))
-                                    )
-                                (send-event *target* 'change-mode 'indax #f)
-                                )
+         (function "indax" #f ,(lambda ()
+                                 (if (not *target*)
+                                     (start 'debug (get-current-continue-forced *game-info*))
+                                     )
+                                 (send-event *target* 'change-mode 'indax #f)
+                                 )
                    )
          )
-       (flag "Game" #f (lambda ((arg0 object) (arg1 debug-menu-msg))
-                         (when (= arg1 (debug-menu-msg press))
-                           (let ((v1-3 (-> *game-info* mode)))
-                             (set! (-> *game-info* mode) (cond
-                                                           ((= v1-3 'play)
-                                                            'debug
-                                                            )
-                                                           ((= v1-3 'debug)
-                                                            'play
-                                                            )
-                                                           (else
-                                                             (-> *game-info* mode)
+       (flag "Game" #f ,(lambda ((arg0 object) (arg1 debug-menu-msg))
+                          (when (= arg1 (debug-menu-msg press))
+                            (let ((v1-3 (-> *game-info* mode)))
+                              (set! (-> *game-info* mode) (cond
+                                                            ((= v1-3 'play)
+                                                             'debug
                                                              )
-                                                           )
-                                   )
-                             )
-                           )
-                         (= (-> *game-info* mode) 'play)
-                         )
-             )
-       (function "Clean" #f (lambda ()
-                              (if (time-of-day-setup #f)
-                                  (time-of-day-setup #t)
-                                  )
-                              (play-clean #f)
-                              (none)
+                                                            ((= v1-3 'debug)
+                                                             'play
+                                                             )
+                                                            (else
+                                                              (-> *game-info* mode)
+                                                              )
+                                                            )
+                                    )
                               )
-                 )
-       (flag "Stats" *stats-target* dm-boolean-toggle-pick-func)
-       (function "Reset" #f (lambda () (reset-actors 'debug) (none)))
-       (function "Start" #f (lambda () (start 'play (-> *game-info* current-continue)) (none)))
-       (function "Editor" #f (lambda ()
-                               (kill-by-type editable-player *active-pool*)
-                               (process-spawn editable-player :init editable-player-init #f :to *entity-pool*)
-                               (set-master-mode 'game)
+                            )
+                          (= (-> *game-info* mode) 'play)
+                          )
+             )
+       (function "Clean" #f ,(lambda ()
+                               (if (time-of-day-setup #f)
+                                   (time-of-day-setup #t)
+                                   )
+                               (play-clean #f)
                                (none)
                                )
+                 )
+       (flag "Stats" *stats-target* dm-boolean-toggle-pick-func)
+       (function "Reset" #f ,(lambda () (reset-actors 'debug) (none)))
+       (function "Start" #f ,(lambda () (start 'play (-> *game-info* current-continue)) (none)))
+       (function "Editor" #f ,(lambda ()
+                                (kill-by-type editable-player *active-pool*)
+                                (process-spawn editable-player :init editable-player-init #f :to *entity-pool*)
+                                (set-master-mode 'game)
+                                (none)
+                                )
                  )
        )
     )
@@ -6035,9 +6078,3 @@
   (debug-menus-handler *debug-menu-context*)
   (debug-menus-handler *popup-menu-context*)
   )
-
-)
-
-
-
-

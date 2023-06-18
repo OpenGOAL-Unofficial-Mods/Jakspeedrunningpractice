@@ -198,7 +198,7 @@
 
 (deftype mood-context (mood-context-core3)
   "`state` holds an arbitrary state structure, ie `[[sewer-states]]` and is used
-   when updating the mood.  This means that an individual state structure must be less than 128 bytes"
+when updating the mood.  This means that an individual state structure must be less than 128 bytes"
   ((itimes vector4w 4 :inline :offset-assert 1776)
    (state  uint32   32        :offset-assert 1840)
    (data   uint128  123       :offset          0)
@@ -248,7 +248,7 @@
    (lightning-count0      uint32                     :offset-assert 144)
    (lightning-count1      uint32                     :offset-assert 148)
    (lightning-count2      uint32                     :offset-assert 152)
-   (rain-id               uint32                     :offset-assert 156)
+   (rain-id               sound-id                   :offset-assert 156)
    (sound-pitch           float                      :offset-assert 160)
    (fogs                  mood-fog-table     9       :offset-assert 164)
    (colors                mood-color-table   3       :offset-assert 200)
@@ -271,10 +271,3 @@
     (play-or-stop-lightning! (_type_ sound-spec vector) sound-id 18)
     )
   )
-
-
-0
-
-
-
-

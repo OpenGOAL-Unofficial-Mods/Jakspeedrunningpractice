@@ -5,20 +5,21 @@
 ;; name in dgo: trigonometry
 ;; dgos: ENGINE, GAME
 
-;; The "rotation" unit stores an angle in a float, where 1.0 = 1/65,536 (1/2^16) of a rotation.
-;; Use the ~r format specifier to print rotations as degrees.
-;; In general, functions which use these units will only be accurate to within 1/65,536th of a rotation,
-;; as they often internally convert the float to an integer. These function also handle wrapping
-;; correctly, and will output angles in the range -32768 to 32768 (+/- one half of a rotation)
-;; Functions with these units have deg or nothing special in the name.
+#|@file
+The "rotation" unit stores an angle in a float, where 1.0 = 1/65,536 (1/2^16) of a rotation.
+Use the ~r format specifier to print rotations as degrees.
+In general, functions which use these units will only be accurate to within 1/65,536th of a rotation,
+as they often internally convert the float to an integer. These function also handle wrapping
+correctly, and will output angles in the range -32768 to 32768 (+/- one half of a rotation)
+Functions with these units have deg or nothing special in the name.
 
-;; Some functions use radians. These typically have rad in the name, and they don't handle wrapping.
-;; The input must be in the range -pi to pi
+Some functions use radians. These typically have rad in the name, and they don't handle wrapping.
+The input must be in the range -pi to pi
 
-;; General note on floating point constants: to avoid ambiguity/rounding issues related to printing/parsing, weird
-;; constants are stored as hex.  Commonly used constants that are exactly represented (1, 0.5, etc) will appear
-;; normally.
-
+General note on floating point constants: to avoid ambiguity/rounding issues related to printing/parsing, weird
+constants are stored as hex.  Commonly used constants that are exactly represented (1, 0.5, etc) will appear
+normally.
+|#
 
 ;; There is a bug in some of the cosine functions that can be fixed by toggling this flag.
 (defglobalconstant FIX_COSINE_BUG #f)
@@ -546,22 +547,22 @@
      (set! f22 (+ acc (* f8 f20)))
      ;; sll r0, r0, 0
      ;; swc1 f21, 0(a0)
-     (set! (-> ,out 0) f21)
+     (set! (-> ,out x) f21)
      ;; sll r0, r0, 0
      ;; swc1 f22, 4(a0)
-     (set! (-> ,out 1) f22)
+     (set! (-> ,out y) f22)
      ;; or v0, r0, r0
      0
      )
   )
 
-(defun sincos-rad! ((out (pointer float)) (x float))
+(defun sincos-rad! ((out vector) (x float))
   "Compute the sine and cosine of x, store it in the output array.
    Has the cosine bug."
   (sincos-rad-asm out x)
   )
 
-(defun sincos! ((out (pointer float)) (x float))
+(defun sincos! ((out vector) (x float))
   "Compute the sine and cosine of x, store it in the output array.
    The input is in rotation units, and is unwrapped properly.
    Also has the cosine bug"
@@ -822,7 +823,7 @@
 (defun sign-bit ((arg0 int))
   "Return 1 if bit 31 is set, otherwise 0."
   ;; originally used 32-bit shift, doesn't really matter.
-  (logand (shl arg0 31) 1)
+  (logand (shr arg0 31) 1)
 
   ;(local-vars (v1-1 int))
   ; (let ((v1-0 arg0))

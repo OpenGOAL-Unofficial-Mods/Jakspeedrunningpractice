@@ -5,8 +5,10 @@
 ;; name in dgo: vector-h
 ;; dgos: ENGINE, GAME
 
-;; Changes:
-;; - vector+!, vector-!, vector-dot, vector4-dot replaced with actual implementations.
+#|@file
+Changes:
+- vector+!, vector-!, vector-dot, vector4-dot replaced with actual implementations.
+|#
 
 ;; DECOMP BEGINS
 
@@ -537,6 +539,7 @@
    (y    float   :offset          4)
    (z    float   :offset          8)
    )
+  :pack-me ;; removeme
   :method-count-assert 9
   :size-assert         #xc
   :flag-assert         #x90000000c
