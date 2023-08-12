@@ -2,9 +2,6 @@ data/assets/*
 data/decompiler_out/*
 data/iso_data/*
 data/out/*
-data/log/*
-
-data/log/game.txt
 
 reshade-shaders/*
 AG1k's_Ultimate_Jak_and_Daxter_Preset_V1.ini
